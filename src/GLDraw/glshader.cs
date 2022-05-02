@@ -1,0 +1,136 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Runtime.InteropServices;
+using glcore.Types;
+
+namespace glcore
+{
+    public unsafe class Shader
+    {
+        #region PINVOKE
+
+
+        [DllImport("GLCore.dll", CallingConvention = CallingConvention.Cdecl)]
+        static extern uint CompileShaders(byte* vsData, byte* fsData, int* errorCheck, byte* errorOutput);
+
+        [DllImport("GLCore.dll", CallingConvention = CallingConvention.Cdecl)]
+        static extern int SetValue(byte* name, uint shaderProgram, int type, void* data);
+
+        [DllImport("GLCore.dll", CallingConvention = CallingConvention.Cdecl)]
+        static extern int LinkTexture(byte* name, uint shaderProgram, uint textureID, uint textureUnit);
+
+
+
+        #endregion
+
+        internal List<GLTexture> linkedTextures = new List<GLTexture>();
+
+        internal uint shaderProgram;
+
+        public static string CompileLog = "";
+
+        public static bool Compile(string VS, string FS, out Shader compiledShader)
+        { 
+            byte[] vsData = Encoding.ASCII.GetBytes(VS + "\0");
+            byte[] fsData = Encoding.ASCII.GetBytes(FS + "\0");
+
+            int errorCheck = 0;
+
+            byte[] infolog = new byte[512];
+
+            uint shaderProgram;
+
+            fixed (byte* vsptr = vsData)
+            {
+                fixed (byte* fsptr = fsData)
+                {
+                    fixed (byte* err = infolog)
+                    {
+                        shaderProgram = CompileShaders(vsptr, fsptr, &errorCheck, err);
+                    }
+                }                
+            }
+
+            compiledShader = new Shader(shaderProgram);
+
+            if (errorCheck != 0)
+            {
+                Shader.CompileLog = Encoding.ASCII.GetString(infolog);
+                return false;
+            }
+
+            return true;
+
+        }
+
+        internal Shader(uint sProgram)
+        {
+            shaderProgram = sProgram;
+        }
+
+        public void SetValue(string name, object value)
+        {
+            int type = (int)objectToType(value);
+
+            GCHandle handle = GCHandle.Alloc(value, GCHandleType.Pinned);
+            void* ptr = (void*)handle.AddrOfPinnedObject();
+
+            byte[] targetName = Encoding.ASCII.GetBytes(name + "\0");
+
+            fixed (byte* namePtr = targetName)
+            {
+                if (SetValue(namePtr, shaderProgram, type, ptr) == -1)
+                    throw new Exception("The attribute \"" + name + "\" was not found in the shader!");
+            }
+
+            handle.Free();      
+        }
+
+        public void LinkTexture(string name, GLTexture targetTexture)
+        {
+            byte[] targetName = Encoding.ASCII.GetBytes(name + "\0");
+
+            fixed (byte* namePtr = targetName)
+            {
+                if (LinkTexture(namePtr, shaderProgram, targetTexture.textureID, (uint)linkedTextures.Count) == -1)
+                    throw new Exception("The attribute \"" + name + "\" was not found in the shader!");
+
+                linkedTextures.Add(targetTexture);
+            }
+        }
+
+        DataType objectToType(object value)
+        {
+
+            if (value.GetType() == typeof(Matrix4x4)) return DataType.mat4;
+            else if (value.GetType() == typeof(Vector3)) return DataType.vec3;
+            else if (value.GetType() == typeof(Vector2)) return DataType.vec2;
+            else if (value.GetType() == typeof(float)) return DataType.fp32;
+            else if (value.GetType() == typeof(int)) return DataType.int32;
+            else if (value.GetType() == typeof(Int16)) return DataType.int2;
+            else if (value.GetType() == typeof(Matrix3x3)) return DataType.mat3;
+
+            else throw new Exception("Not a valid object Type!");
+
+
+        }
+
+        enum DataType
+        {
+            vec3 = 0,// = 4 * 3,
+            vec2 = 1,// = 4 * 2,
+            fp32 = 2,// = 4,
+            int32 = 3,// = 4,
+            int2 = 4,// = 4 * 2,
+            byte4 = 5,// = 4,
+            mat4 = 6,
+            mat3 = 7,
+            sampler2D = 8,
+            sampler1D = 9,
+            samplerCube = 10
+        }
+    }
+}

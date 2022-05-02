@@ -1,0 +1,5 @@
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDraw\bin\Debug\GLDraw.dll
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDraw\bin\Debug\GLDraw.pdb
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDraw\obj\Debug\GLDraw.csprojResolveAssemblyReference.cache
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDraw\obj\Debug\GLDraw.dll
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDraw\obj\Debug\GLDraw.pdb

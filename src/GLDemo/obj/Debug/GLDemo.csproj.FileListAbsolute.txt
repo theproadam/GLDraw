@@ -1,0 +1,13 @@
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\obj\Debug\GLDemo.Form1.resources
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\obj\Debug\GLDemo.Properties.Resources.resources
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\obj\Debug\GLDemo.csproj.GenerateResource.Cache
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\bin\Debug\Shaders\SimpleFS.fs
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\bin\Debug\Shaders\SimpleVS.vs
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\bin\Debug\GLDemo.exe.config
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\bin\Debug\GLDemo.exe
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\bin\Debug\GLDemo.pdb
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\bin\Debug\GLDraw.dll
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\bin\Debug\GLDraw.pdb
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\obj\Debug\GLDemo.csprojResolveAssemblyReference.cache
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\obj\Debug\GLDemo.exe
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\obj\Debug\GLDemo.pdb
