@@ -636,10 +636,10 @@ namespace glcore.Types
             proj.X3Y3 = 0;
 
             //reverse Z
-           // proj.X0Y2 = -proj.X0Y2;
-           // proj.X1Y2 = -proj.X1Y2;
-           // proj.X2Y2 = -proj.X2Y2;
-          //  proj.X3Y2 = -proj.X3Y2;
+            proj.X2Y0 = -proj.X2Y0;
+            proj.X2Y1 = -proj.X2Y1;
+            proj.X2Y2 = -proj.X2Y2;
+            proj.X2Y3 = -proj.X2Y3;
 
             //scale bias
 
@@ -647,6 +647,22 @@ namespace glcore.Types
          //   proj.X3Y2 = -0.300009f;
 
             return proj;
+        }
+
+        public static Matrix4x4 PerspectiveMatrix(float hFOV, int viewportWidth, int viewportHeight, float zNear, float zFar)
+        {
+            float aspect = (float)viewportWidth / (float)viewportHeight;
+
+            //FOV mod uses vFOV, using 1/aspect we can reverse the calculation
+            Matrix4x4 proj = PerspectiveMatrix(hFOV, FOVMod(hFOV, 1.0f / aspect), zNear, zFar);
+
+            return proj;
+        }
+
+        static float FOVMod(float FOV, float aspectRatio)
+        {
+            const float deg2rads = (float)(Math.PI / 180d);
+            return 2.0f * (float)Math.Atan(Math.Tan(FOV * 0.5f * deg2rads) / aspectRatio) / deg2rads;
         }
 
         public static Matrix4x4 OrthographicMatrix(float width, float height, float zNear, float zFar)
@@ -678,48 +694,6 @@ namespace glcore.Types
             result.X3Y0 = -(r + l) / (r - l);
             result.X3Y1 = -(t + b) / (t - b);
             result.X3Y2 = -(f + n) / (f - n);
-
-            return result;
-        }
-
-        public static Matrix4x4 PerspectiveMatrix123(float hFOV, float vFOV, float zNear, float zFar)
-        {
-            Matrix4x4 Result = new Matrix4x4();
-            const float deg2rad = (float)(Math.PI / 180d);
-
-            float aspect = 1.0f;
-
-            float tanHalfFovy = (float)Math.Tan(deg2rad * vFOV / 2f);
-
-            Result[0, 0] = 1 / (aspect * tanHalfFovy);
-            Result[1, 1] = 1 / (tanHalfFovy);
-            Result[2, 2] = -(zFar + zNear) / (zFar - zNear);
-            Result[2, 3] = -1;
-            Result[3, 2] = -(2 * zFar * zNear) / (zFar - zNear);
-
-
-            return Result;
-        }
-
-
-
-        public static Matrix4x4 PerspectiveMatrix1(float hFOV, float vFOV, float nearDist, float farDist)
-        {
-            Matrix4x4 result = new Matrix4x4();
-            const float deg2rad = (float)(Math.PI / 180d);
-
-            float aspect = 1;
-            bool leftHanded = false;
-
-            float frustumDepth = farDist - nearDist;
-            float oneOverDepth = 1 / frustumDepth;
-
-            result[1, 1] = 1.0f / (float)Math.Tan(0.5f * deg2rad * vFOV);
-            result[0, 0] = (leftHanded ? 1 : -1) * result[1, 1] / aspect;
-            result[2, 2] = farDist * oneOverDepth;
-            result[3, 2] = (-farDist * nearDist) * oneOverDepth;
-            result[2, 3] = 1;
-            result[3, 3] = 0;
 
             return result;
         }
@@ -801,7 +775,6 @@ namespace glcore.Types
 
             return result;
         }
-
 
         public static Matrix4x4 operator +(Matrix4x4 A, Matrix4x4 B)
         {

@@ -91,7 +91,42 @@ namespace glcore
             VAO = _VAO;
         }
 
-        
+        public GLBuffer(float[] vertexData, Shader targetShader)
+        {
+            if (vertexData == null) throw new ArgumentNullException();
+            if (vertexData.Length <= 0) throw new Exception("Size must be bigger than zero!");
+
+            int[] attribConfig = new int[targetShader.attributes.Count];
+
+            int Stride = 0;
+            for (int i = 0; i < attribConfig.Length; i++)
+            {
+                int a_size = Shader.typeToSize(targetShader.attributes[i].type);
+                Stride += a_size;
+                attribConfig[i] = a_size;
+            }
+
+            if (vertexData.Length % Stride != 0) throw new Exception("Invalid Stride OR Size! Please make sure you vertex data aligns with the shader attributes!");
+
+            stride = Stride;
+            _size = vertexData.Length * 4;
+
+            //load data
+            uint _VBO, _VAO;
+
+            fixed (float* vData = vertexData)
+            {
+                fixed (int* iData = attribConfig)
+                {
+                    CreateBuffer(&_VAO, &_VBO, vertexData.Length * 4, vData, Stride, attribConfig.Length, iData);
+                }
+            }
+
+            //WARNING RISKY !!! [on second thought it should be fine]
+            VBO = _VBO;
+            VAO = _VAO;
+        }
+
         public GLBuffer(float[] vertexData, uint[] indices, int Stride = 3)
         {
             if (vertexData == null) throw new ArgumentNullException();

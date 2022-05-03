@@ -225,6 +225,11 @@ namespace GLDemo
         {
             return Matrix4x4.RollMatrix(-cameraRotation.y) * Matrix4x4.PitchMatrix(-cameraRotation.z);
         }
+
+        public Matrix4x4 CreateViewMatrix()
+        {
+            return (Matrix4x4.RollMatrix(-cameraRotation.y) * Matrix4x4.PitchMatrix(-cameraRotation.z)) * Matrix4x4.TranslationMatrix(-cameraPosition);
+        }
     }
 
     public class RenderThread
@@ -303,6 +308,102 @@ namespace GLDemo
             sw.Reset();
 
             finished = true;
+        }
+    }
+
+    public unsafe static class Utilities
+    {
+        /// <summary>
+        /// Smoothnes Vertex Data
+        /// </summary>
+        /// <param name="input">XYZ IJK vertex Data</param>
+        /// <returns></returns>
+        public static float[] smoothData(float[] input, float scale = 0.1f)
+        {
+            //XYZ IJK
+
+            int vert = input.Length / 6;
+            int tris = vert / 3;
+
+            float[] results = new float[input.Length * 4];
+
+
+            int pos = 0;
+
+            fixed (float* rptr = results)
+            {
+                fixed (float* fptr = input)
+                {
+                    for (int i = 0; i < tris; i++)
+                    {
+                        ComputeTris((Vector3*)(fptr + i * 18), (Vector3*)(rptr) + pos, scale);
+                        pos += 24;
+                    }
+            
+                }
+            }
+
+            return results;
+        }
+
+        static void ComputeTris(Vector3* posi, Vector3* output, float scale)
+        {
+            Vector3 V1 = posi[0], N1 = posi[1];
+            Vector3 V2 = posi[2], N2 = posi[3];
+            Vector3 V3 = posi[4], N3 = posi[5];
+
+            //Triangle 1
+            Vector3 p12 = (V1 + V2) / 2f;
+            Vector3 p13 = (V1 + V3) / 2f;
+            Vector3 p23 = (V2 + V3) / 2f;
+
+            Vector3 n12 = Vector3.Normalize((N1 + N2) / 2f);
+            Vector3 n13 = Vector3.Normalize((N1 + N3) / 2f);
+            Vector3 n23 = Vector3.Normalize((N2 + N3) / 2f);
+
+            p12 = p12 + n12 * scale;
+            p13 = p13 + n13 * scale;
+            p23 = p23 + n23 * scale;
+
+            //first triangle
+            output[0] = V1;
+            output[1] = N1;
+
+            output[2] = p12;
+            output[3] = n12;
+
+            output[4] = p13;
+            output[5] = n13;
+
+            //second triangle
+            output[6] = V2;
+            output[7] = N2;
+
+            output[8] = p23;
+            output[9] = n23;
+
+            output[10] = p12;
+            output[11] = n12;
+
+            //third triangle
+            output[12] = V3;
+            output[13] = N3;
+
+            output[14] = p13;
+            output[15] = n13;
+
+            output[16] = p23;
+            output[17] = n23;
+
+            //fourth triangle (middle)
+            output[18] = p12;
+            output[19] = n12;
+
+            output[20] = p23;
+            output[21] = n23;
+
+            output[22] = p13;
+            output[23] = n13;
         }
     }
 }

@@ -104,6 +104,40 @@ namespace glcore
         GL_OUT_OF_MEMORY = 0x0505,
     }
 
+    public enum GLType
+    {
+        GL_FLOAT_VEC2 = 0x8B50,
+        GL_FLOAT_VEC3 = 0x8B51,
+        GL_FLOAT_VEC4 = 0x8B52,
+        GL_INT_VEC2 = 0x8B53,
+        GL_INT_VEC3 = 0x8B54,
+        GL_INT_VEC4 = 0x8B55,
+        GL_BOOL = 0x8B56,
+        GL_BOOL_VEC2 = 0x8B57,
+        GL_BOOL_VEC3 = 0x8B58,
+        GL_BOOL_VEC4 = 0x8B59,
+        GL_FLOAT_MAT2 = 0x8B5A,
+        GL_FLOAT_MAT3 = 0x8B5B,
+        GL_FLOAT_MAT4 = 0x8B5C,
+        GL_SAMPLER_1D = 0x8B5D,
+        GL_SAMPLER_2D = 0x8B5E,
+        GL_SAMPLER_3D = 0x8B5F,
+        GL_SAMPLER_CUBE = 0x8B60,
+        GL_BYTE = 0x1400,
+        GL_UNSIGNED_BYTE = 0x1401,
+        GL_SHORT = 0x1402,
+        GL_UNSIGNED_SHORT = 0x1403,
+        GL_INT = 0x1404,
+        GL_UNSIGNED_INT = 0x1405,
+        GL_FLOAT = 0x1406,
+        GL_2_BYTES = 0x1407,
+        GL_3_BYTES = 0x1408,
+        GL_4_BYTES = 0x1409,
+        GL_DOUBLE = 0x140A
+    }
+
+
+
     public enum GLClear
     {
         GL_DEPTH_BUFFER_BIT = 0x00000100,
@@ -133,6 +167,9 @@ namespace glcore
 
         [DllImport("opengl32.dll")]
         static extern IntPtr wglGetProcAddress([In, MarshalAs(UnmanagedType.LPStr)] string name);
+
+        [DllImport("opengl32.dll")]
+        static extern void glViewport(int x, int y, int width, int height);
 
 
 
@@ -211,8 +248,14 @@ namespace glcore
             {
                 throw new Exception("Failed to Initialize!");
             }
+
+
         }
 
+        public void Resize(int width, int height)
+        {
+            glViewport(0, 0, width, height);
+        }
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -247,7 +290,6 @@ namespace glcore
 
 
     }
-
 }
 
 namespace glcore.Blit

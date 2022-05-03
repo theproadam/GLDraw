@@ -11,3 +11,5 @@ C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\bin\Debug\GLDr
 C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\obj\Debug\GLDemo.csprojResolveAssemblyReference.cache
 C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\obj\Debug\GLDemo.exe
 C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\obj\Debug\GLDemo.pdb
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\bin\Debug\Shaders\phongVS.vs
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\bin\Debug\Shaders\phongFS.fs

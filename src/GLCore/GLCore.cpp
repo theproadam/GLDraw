@@ -11,8 +11,9 @@
 #define GL_ELEMENT_ARRAY_BUFFER 0x8893
 #define GL_TRIANGLES 0x0004
 #define GL_UNSIGNED_INT 0x1405
-
 #define GL_TEXTURE0 0x84C0
+#define GL_ACTIVE_ATTRIBUTES 0x8B89
+#define GL_ACTIVE_UNIFORMS 0x8B86
 
 typedef signed   long  int     GLsizeiptr;
 
@@ -59,6 +60,7 @@ void(__stdcall *glGenerateMipmap)(GLenum target);
 void(__stdcall *glUniform1i)(GLint location, GLint v0);
 void(__stdcall *glActiveTexture)(GLenum texture);
 void(__stdcall *glGetActiveUniform)(GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLint *size, GLenum *type, char *name);
+void(__stdcall *glGetActiveAttrib)(GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLint *size, GLenum *type, char *name);
 
 char *vertexShaderSource = "#version 330 core\n"
 "layout (location = 0) in vec3 aPos;\n"
@@ -92,9 +94,25 @@ enum DataType
 extern "C"
 {
 
+	DLL void GetActiveUniform(unsigned int program, unsigned int index, int bufSize, int* length, int* size, int* type, char* name)
+	{
+		glGetActiveUniform(program, index, bufSize, length, size, (GLenum*)type, name);
+	}
+
+	DLL void GetActiveAttrib(unsigned int program, unsigned int index, int bufSize, int* length, int* size, int* type, char* name)
+	{
+		glGetActiveAttrib(program, index, bufSize, length, size, (GLenum*)type, name);
+	}
+
+	DLL void GetShaderConfig(unsigned int program, int* attributes, int* uniforms)
+	{
+		glGetProgramiv(program, GL_ACTIVE_ATTRIBUTES, attributes);
+		glGetProgramiv(program, GL_ACTIVE_UNIFORMS, uniforms);
+	}
+
+
 	DLL unsigned int CompileShaders(byte* vsData, byte* fsData, long* errorCheck, char* infoLog)
 	{
-		
 		char* vD = (char*)vsData;
 		char* fD = (char*)fsData;
 
@@ -128,7 +146,6 @@ extern "C"
 			*errorCheck = 2;
 			return 0;
 		}
-
 
 		// link shaders
 		unsigned int shaderProgram = glCreateProgram();
@@ -188,12 +205,14 @@ extern "C"
 		glBufferData(GL_ARRAY_BUFFER, vertSize, vertices, GL_STATIC_DRAW);
 
 		int offset = 0;
+		
 		for (int i = 0; i < attribs; i++)
 		{
 			glVertexAttribPointer(i, attribSize[i], GL_FLOAT, GL_FALSE, Stride * sizeof(float), (void*)(offset * sizeof(float)));
 			glEnableVertexAttribArray(i);
 			offset += attribSize[i];
 		}
+
 
 		//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 		//glEnableVertexAttribArray(0);
@@ -360,6 +379,9 @@ extern "C"
 			return 0;
 
 		if ((glGetActiveUniform = (void(__stdcall *)(GLuint, GLuint, GLsizei, GLsizei*, GLint*, GLenum*, char*))wglGetProcAddress("glGetActiveUniform")) == NULL)
+			return 0;
+
+		if ((glGetActiveAttrib = (void(__stdcall *)(GLuint, GLuint, GLsizei, GLsizei*, GLint*, GLenum*, char*))wglGetProcAddress("glGetActiveAttrib")) == NULL)
 			return 0;
 
 		glEnable(GL_DEPTH_TEST);

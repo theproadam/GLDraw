@@ -29,6 +29,9 @@ namespace GLDemo
         GLBuffer teapot;
         GLTexture myTexture;
 
+        Shader phongShader;
+        GLBuffer teapotLightning;
+
         float rotPos = 0;
 
         Matrix4x4 model, view, projection;
@@ -66,16 +69,21 @@ namespace GLDemo
         private void Form1_Load(object sender, EventArgs e)
         {
             this.FormClosing += Form1_FormClosing;
+            this.Resize += Form1_Resize;
             this.ClientSize = new Size(800, 800);
             formData = new BlitData(this);
             inputManager = new InputManager(this);
-           // inputManager.cameraPosition = new Vector3(0, 0, -10);
+            inputManager.cameraPosition = new Vector3(0, 0, -1.5f);
 
             if (!Shader.Compile(vertexShaderSource, fragmentShaderSource, out myShader))
                 throw new Exception("Failed to compile! Reason:\n" + Shader.CompileLog);
 
             if (!Shader.Compile(File.ReadAllText(@"Shaders\SimpleVS.vs"), File.ReadAllText(@"Shaders\SimpleFS.fs"), out teapotShader))
                 throw new Exception("Failed to compile! Reason:\n" + Shader.CompileLog);
+
+            if (!Shader.Compile(File.ReadAllText(@"Shaders\phongVS.vs"), File.ReadAllText(@"Shaders\phongFS.fs"), out phongShader))
+                throw new Exception("Failed to compile! Reason:\n" + Shader.CompileLog);
+
 
             myTexture = new GLTexture(new Bitmap("sampleTexture.png"), true);
 
@@ -92,11 +100,13 @@ namespace GLDemo
             }, typeof(Vector3));
 
             STLImporter sImport = new STLImporter("teapot.stl");
+            teapotLightning = new GLBuffer(STLImporter.AverageUpFaceNormalsAndOutputVertexBuffer(sImport.AllTriangles, 45), phongShader);
+
 
            // teapot = ToGLBuffer.ToBuffer(sImport);
            // teapot = square;
 
-          //  if (false)
+            if (false)
             teapot = new GLBuffer(new float[]
             {
                  0.5f, 0.5f, 0.0f, 1.0f, 1.0f,   // top right
@@ -152,13 +162,20 @@ namespace GLDemo
                  0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
                 -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
                 -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
-            }, typeof(Vector3), typeof(Vector2));
+            }, teapotShader);
+
 
 
             RT = new RenderThread(144);
             RT.RenderFrame += RT_RenderFrame;
 
            // RT.Start();
+        }
+
+        void Form1_Resize(object sender, EventArgs e)
+        {
+            if (formData != null)
+            formData.Resize(this.ClientSize.Width, this.ClientSize.Height);
         }
 
         void Form1_FormClosing(object sender, FormClosingEventArgs e)
@@ -175,81 +192,29 @@ namespace GLDemo
             inputManager.CalculateMouseInput();
             inputManager.CalcualteKeyboardInput(deltaTime / 66.66f);
 
-
-
             if (!this.IsDisposed)
                 this.Invoke((Action)delegate()
                 {
-                   
-
                     GL.Clear(0.2f, 0.3f, 0.3f, 1.0f);
 
                     model = new Matrix4x4(true);
-                    model = Matrix4x4.TranslationMatrix(-inputManager.cameraPosition);
-                //    view = new Matrix4x4(true);
+                    view = inputManager.CreateViewMatrix();
+                    projection = Matrix4x4.PerspectiveMatrix(90, ClientSize.Width, ClientSize.Height, 0.1f, 100);
 
+                    phongShader.SetValue("model", model);
+                    phongShader.SetValue("view", view);
+                    phongShader.SetValue("projection", projection);
 
-
-
-                    Matrix4x4 mat44 = new Matrix4x4(true);
-
-
-                    mat44.X2Y2 = -1;
-                  //  mat44.X2Y3 = -1;
-                 //   mat44.X3Y2 = -1;
-
-
-                //    projection = Matrix4x4.PerspectiveMatrix123(90, 90, 10f, 1000f);// *mat44;
-                    projection = Matrix4x4.PerspectiveMatrix(90, 90, 0.1f, 100) * mat44;
-                 //   MessageBox.Show(projection.ToString());
-
-                //    MessageBox.Show(projection.ToString());
-
-                 //   projection = projection * mat44;
-
-                  //  MessageBox.Show(projection.ToString());
-
-                //    projection = new Matrix4x4(true);
-
-                  //  MessageBox.Show(projection.ToString());
-
-                  //  view = view * mat44;
-
-
-                //    
-
-                //    teapotShader.SetValue("pos", new Vector3(inputManager.cameraPosition.x, inputManager.cameraPosition.y, inputManager.cameraPosition.z));
-                    teapotShader.SetValue("pos", Matrix4x4.TranslationMatrix(-inputManager.cameraPosition));
-                    teapotShader.SetValue("camRot", inputManager.CreateCameraRotationMatrix4x4());
-                 //   teapotShader.SetValue("camRot", new Matrix4x4(true));
-                //    teapotShader.SetValue("camRot", Matrix4x4.RollMatrix(inputManager.cameraRotation.z));
-
-
-                   // projection = Matrix4x4.OrthographicMatrix(2, 2, 0.1f, 100);
-                  //  MessageBox.Show(projection.ToString());
-
-
-                 //   projection = Matrix4x4.PerspectiveMatrix123(90, 90, 0.1f, 1000);
-
-                //    MessageBox.Show(projection.ToString());
-
-                 //   projection = Matrix4x4.OrthographicMatrix(1, -1, 1, -1, 0.1f, 100);
-               //     MessageBox.Show(projection.ToString());
-
-                 //   teapotShader.SetValue("model", model);
-                //    teapotShader.SetValue("view", view);
-                    teapotShader.SetValue("projection", projection);
-
-                    GLError ERR = GL.CheckError();
-                    if (ERR != GLError.GL_NO_ERROR)
+                    GLError error = GL.CheckError();
+                    if (error != GLError.GL_NO_ERROR)
                     {
-                        MessageBox.Show("GLDraw Error: " + ERR);
+                        MessageBox.Show("GLDraw Error: " + error);
                         Application.Exit();
                     }
 
-                    GL.Draw(teapot, teapotShader);
+                    GL.Draw(teapotLightning, phongShader);
                     GL.Blit(formData);
-                    this.Text = deltaTime.ToString() + ", " + " -> " + inputManager.cameraPosition;
+                    this.Text = deltaTime.ToString() + "ms";
                 });
 
             rotPos += 0.5f;
@@ -297,6 +262,7 @@ namespace GLDemo
             
         }
 
+        
 
     }
 }
