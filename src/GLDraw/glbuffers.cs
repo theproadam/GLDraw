@@ -19,8 +19,15 @@ namespace glcore
         [DllImport("GLCore.dll", CallingConvention = CallingConvention.Cdecl)]
         static extern internal void CreateBuffer(uint* VAO, uint* VBO, int vertSize, void* vertices, int Stride, int attribs, int* attribSize);
 
+        [DllImport("GLCore.dll", CallingConvention = CallingConvention.Cdecl)]
+        static extern internal void DeleteBuffer(uint VAO, uint VBO);
 
         #endregion
+
+        static GLBuffer()
+        {
+            GLGC.Initialize();
+        }
 
         internal int _size;
 
@@ -47,9 +54,21 @@ namespace glcore
         {
             if (!disposed)
             {
-               
+                //dispose here
+                GLGC.GCQueue.Add(new GCTarget() { 
+                    type = GCType.Buffer,
+                    targetVAO = VAO,
+                    targetVBO = VBO
+                });
+
                 disposed = true;
             }
+        }
+
+        public void DeleteBuffer()
+        {
+            DeleteBuffer(VAO, VBO);
+            disposed = true;
         }
 
         public GLBuffer(float[] vertexData, params Type[] attributeTypes)
@@ -89,6 +108,13 @@ namespace glcore
             //WARNING RISKY !!!
             VBO = _VBO;
             VAO = _VAO;
+
+
+
+            //DeleteBuffer(&_VAO, &_VBO);
+         //   throw new Exception();
+
+
         }
 
         public GLBuffer(float[] vertexData, Shader targetShader)
@@ -167,7 +193,15 @@ namespace glcore
         [DllImport("GLCore.dll", CallingConvention = CallingConvention.Cdecl)]
         static extern internal void CreateTexture(uint* textureID, int width, int height, int stride, void* data);
 
+        [DllImport("GLCore.dll", CallingConvention = CallingConvention.Cdecl)]
+        static extern internal void DeleteTexture(uint textures);
+
         #endregion
+
+        static GLTexture()
+        {
+            GLGC.Initialize();
+        }
 
         private int _width;
         private int _height;
@@ -195,9 +229,14 @@ namespace glcore
         {
             if (!disposed)
             {
-
+               // DeleteTexture(textureID);
                 disposed = true;
             }
+        }
+
+        public void DeleteTexture()
+        {
+            DeleteTexture(textureID);
         }
 
         public GLTexture(byte[] textureData, uint width, uint height)
@@ -270,5 +309,10 @@ namespace glcore
                 throw new Exception("Error Occured: " + t.ToString());
         }
 
+    }
+
+    public unsafe class GLFramebuffer
+    { 
+        
     }
 }

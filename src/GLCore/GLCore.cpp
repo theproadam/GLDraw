@@ -62,6 +62,10 @@ void(__stdcall *glActiveTexture)(GLenum texture);
 void(__stdcall *glGetActiveUniform)(GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLint *size, GLenum *type, char *name);
 void(__stdcall *glGetActiveAttrib)(GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLint *size, GLenum *type, char *name);
 
+void(__stdcall *glDeleteVertexArrays)(GLsizei n, GLuint *arrays);
+void(__stdcall *glDeleteBuffers)(GLsizei n, GLuint * buffers);
+//void(__stdcall *glDeleteTextures)(GLsizei n, GLuint * textures);
+
 char *vertexShaderSource = "#version 330 core\n"
 "layout (location = 0) in vec3 aPos;\n"
 "void main()\n"
@@ -75,6 +79,7 @@ char *fragmentShaderSource = "#version 330 core\n"
 "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
 "}\n\0";
 
+#define uint unsigned int
 
 enum DataType
 {
@@ -93,7 +98,6 @@ enum DataType
 
 extern "C"
 {
-
 	DLL void GetActiveUniform(unsigned int program, unsigned int index, int bufSize, int* length, int* size, int* type, char* name)
 	{
 		glGetActiveUniform(program, index, bufSize, length, size, (GLenum*)type, name);
@@ -109,7 +113,6 @@ extern "C"
 		glGetProgramiv(program, GL_ACTIVE_ATTRIBUTES, attributes);
 		glGetProgramiv(program, GL_ACTIVE_UNIFORMS, uniforms);
 	}
-
 
 	DLL unsigned int CompileShaders(byte* vsData, byte* fsData, long* errorCheck, char* infoLog)
 	{
@@ -229,6 +232,19 @@ extern "C"
 		glBindVertexArray(0);
 	}
 
+	DLL void DeleteBuffer(uint VAO, uint VBO)
+	{
+		glDeleteVertexArrays(1, &VAO);
+		glDeleteBuffers(1, &VBO);
+
+		
+	}
+
+	DLL void DeleteTexture(uint textures)
+	{
+		glDeleteTextures(1, &textures);
+	}
+
 	DLL int LinkTexture(char* name, unsigned int shaderProgram, unsigned int textureID, unsigned int textureUnit)
 	{
 		glUseProgram(shaderProgram);
@@ -255,7 +271,6 @@ extern "C"
 		glTexImage2D(GL_TEXTURE_2D, 0, stride == 4 ? GL_RGBA : GL_RGB, width, height, 0, stride == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, data);
 		glGenerateMipmap(GL_TEXTURE_2D);
 	}
-
 
 	DLL int SetValue(char* name, unsigned int shaderProgram, int type, void* data)
 	{
@@ -384,8 +399,17 @@ extern "C"
 		if ((glGetActiveAttrib = (void(__stdcall *)(GLuint, GLuint, GLsizei, GLsizei*, GLint*, GLenum*, char*))wglGetProcAddress("glGetActiveAttrib")) == NULL)
 			return 0;
 
-		glEnable(GL_DEPTH_TEST);
+		if ((glDeleteVertexArrays = (void(__stdcall *)(GLsizei, GLuint*))wglGetProcAddress("glDeleteVertexArrays")) == NULL)
+			return 0;
 
+		if ((glDeleteBuffers = (void(__stdcall *)(GLsizei, GLuint*))wglGetProcAddress("glDeleteBuffers")) == NULL)
+			return 0;
+
+		//if ((glDeleteTextures = (void(__stdcall *)(GLsizei, GLuint*))wglGetProcAddress("glDeleteTextures")) == NULL)
+		//	return 0;
+
+		glEnable(GL_DEPTH_TEST);
+		glEnable(0x809D); //Multisample
 
 	//	glCullFace(GL_FRONT);
 

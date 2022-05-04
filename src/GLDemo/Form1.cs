@@ -84,11 +84,9 @@ namespace GLDemo
             if (!Shader.Compile(File.ReadAllText(@"Shaders\phongVS.vs"), File.ReadAllText(@"Shaders\phongFS.fs"), out phongShader))
                 throw new Exception("Failed to compile! Reason:\n" + Shader.CompileLog);
 
-
             myTexture = new GLTexture(new Bitmap("sampleTexture.png"), true);
-
             teapotShader.LinkTexture("texture1", myTexture);
-
+            
             square = new GLBuffer(new float[]
             {
                  0.5f, 0.5f, 0.0f,   // top right
@@ -99,9 +97,13 @@ namespace GLDemo
                 -0.5f, -0.5f, 0.0f  // bottom left
             }, typeof(Vector3));
 
+            
             STLImporter sImport = new STLImporter("teapot.stl");
             teapotLightning = new GLBuffer(STLImporter.AverageUpFaceNormalsAndOutputVertexBuffer(sImport.AllTriangles, 45), phongShader);
 
+
+           // teapotLightning.Dispose();
+           // MessageBox.Show("Test");
 
            // teapot = ToGLBuffer.ToBuffer(sImport);
            // teapot = square;
@@ -261,8 +263,5 @@ namespace GLDemo
             this.Text = sw.Elapsed.TotalMilliseconds.ToString() + ", " + GL.CheckError().ToString();
             
         }
-
-        
-
     }
 }

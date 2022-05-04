@@ -11,6 +11,9 @@ namespace glcore
 {
     public unsafe partial class GL
     {
+        internal static int globalThreadID = 0;
+        public static bool overrideThreadSafety = false;
+
         #region PINVOKE
 
         [DllImport("msvcrt.dll", EntryPoint = "memcpy", CallingConvention = CallingConvention.Cdecl, SetLastError = false)]
@@ -51,6 +54,20 @@ namespace glcore
         static GL()
         {
             if (sizeof(int*) != 4) throw new Exception("Error: GLDraw only supports 32bit applications!");
+
+            //Initialize GL Garbage Collector
+           // ThreadSafetyCheck();            
+        }
+
+        internal static void ThreadSafetyCheck()
+        {
+            if (!overrideThreadSafety)
+            {
+                if (globalThreadID == 0)
+                    globalThreadID = System.Threading.Thread.CurrentThread.GetHashCode();
+                else if (globalThreadID != System.Threading.Thread.CurrentThread.GetHashCode())
+                    throw new Exception("Fatal Error: Cross-thread attempt detected! OpenGL contexts can only be started and used from one thread!");
+            }
         }
 
         public static void Clear(float r, float b, float g, float a)
@@ -91,6 +108,119 @@ namespace glcore
             type = (GLError)GetError();
             return type != GLError.GL_NO_ERROR;
         }
+    }
+
+    internal struct GCTarget
+    {
+        internal GCType type;
+        internal uint targetVBO, targetVAO;
+        internal uint targetTexture;
+        internal uint targetShader;
+
+        public void Dispose()
+        {
+            if (type == GCType.Buffer)
+                GLBuffer.DeleteBuffer(targetVAO, targetVBO);
+            else if (type == GCType.Texture)
+                GLTexture.DeleteTexture(targetTexture);
+
+        }
+    }
+
+    /// <summary>
+    /// GLDraw's OpenGL compatible Garbage Collector
+    /// </summary>
+    public unsafe static class GLGC
+    {
+        internal static object ThreadLock = new object();
+        internal static int _msCollectInterval = 5000;
+        internal static bool _initialized = false;
+        internal static List<GCTarget> GCQueue = new List<GCTarget>();
+        internal static Timer GC = new Timer();
+        internal static bool isAllowed = true;
+
+        public static void Initialize()
+        {
+            if (_initialized)
+                return;
+
+            _initialized = true;
+
+            GC.Tick += delegate(object sender, EventArgs e)
+            {
+                Collect();
+            };
+
+            GC.Interval = _msCollectInterval;
+
+            if (isAllowed)
+                GC.Start();
+        }
+
+        /// <summary>
+        /// The Collection Interval in Milliseconds
+        /// </summary>
+        public static int CollectionInterval
+        { 
+            get 
+            { 
+                return _msCollectInterval;
+            }
+            set
+            {
+                if (value <= 0) throw new Exception("Invalid Collection Interval");
+                else _msCollectInterval = value;         
+            } 
+        }
+
+        public static bool EnableCollection 
+        { 
+            get 
+            {
+                return isAllowed;
+            } 
+            set 
+            { 
+                if (value == false) GC.Stop(); 
+                else GC.Start();
+
+                isAllowed = value;
+            } 
+        }
+
+        /// <summary>
+        /// Forces a collection of OpenGL objects destined for deletion
+        /// </summary>
+        public static void Collect()
+        {
+            lock (ThreadLock)
+            {
+                for (int i = GCQueue.Count - 1; i >= 0; i--)
+                {
+                    GCQueue[i].Dispose();
+                    GCQueue.RemoveAt(i);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Clears the collection Queue. This can cause memory leaks
+        /// </summary>
+        public static void ClearQueue()
+        {
+            lock (ThreadLock)
+            {
+                GCQueue.Clear();
+            }
+        }
+    }
+
+    internal enum GCType
+    { 
+        Shader,
+        Texture,
+        Buffer,
+        Framebuffer
     }
 
     public enum GLError
@@ -135,8 +265,6 @@ namespace glcore
         GL_4_BYTES = 0x1409,
         GL_DOUBLE = 0x140A
     }
-
-
 
     public enum GLClear
     {
