@@ -47,6 +47,7 @@
   <ItemGroup>
     <Compile Include="glbuffers.cs" />
     <Compile Include="glcore.cs" />
+    <Compile Include="glextras.cs" />
     <Compile Include="glshader.cs" />
     <Compile Include="gltypes.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

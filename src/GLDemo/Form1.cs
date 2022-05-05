@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.IO;
 using glcore;
 using glcore.Types;
+using glextras;
 
 namespace GLDemo
 {
@@ -31,6 +32,8 @@ namespace GLDemo
 
         Shader phongShader;
         GLBuffer teapotLightning;
+
+        GLFramebuffer fbTest;
 
         float rotPos = 0;
 
@@ -167,6 +170,7 @@ namespace GLDemo
             }, teapotShader);
 
 
+            fbTest = new GLFramebuffer(800, 800);
 
             RT = new RenderThread(144);
             RT.RenderFrame += RT_RenderFrame;
@@ -198,6 +202,7 @@ namespace GLDemo
                 this.Invoke((Action)delegate()
                 {
                     GL.Clear(0.2f, 0.3f, 0.3f, 1.0f);
+               //     GL.Clear(fbTest, 0.2f, 0.3f, 0.3f, 1.0f);
 
                     model = new Matrix4x4(true);
                     view = inputManager.CreateViewMatrix();
@@ -215,8 +220,10 @@ namespace GLDemo
                     }
 
                     GL.Draw(teapotLightning, phongShader);
+
+                   // GL.Draw(fbTest, teapotLightning, phongShader);
                     GL.Blit(formData);
-                    this.Text = deltaTime.ToString() + "ms";
+                    this.Text = deltaTime.ToString() + "ms" +", " + inputManager.cameraPosition + ", " + inputManager.cameraRotation;
                 });
 
             rotPos += 0.5f;

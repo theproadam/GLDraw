@@ -48,6 +48,12 @@ namespace glcore
         [DllImport("GLCore.dll", CallingConvention = CallingConvention.Cdecl)]
         static extern int GetError();
         
+        [DllImport("GLCore.dll", CallingConvention = CallingConvention.Cdecl)]
+        static extern void ChangeCurrentFrameBuffer(uint newFBO);
+
+        [DllImport("GLCore.dll", CallingConvention = CallingConvention.Cdecl)]
+        static extern void ChangeFrameBufferTexture(uint Tex);
+
 
         #endregion
 
@@ -72,12 +78,38 @@ namespace glcore
 
         public static void Clear(float r, float b, float g, float a)
         {
+            ChangeCurrentFrameBuffer(0);
             glClearColor(r, g, b, a);
             glClear((uint)GLClear.GL_COLOR_BUFFER_BIT | (uint) GLClear.GL_DEPTH_BUFFER_BIT);
         }
 
+        public static void Clear(GLFramebuffer framebuffer, float r, float b, float g, float a)
+        {
+            ChangeCurrentFrameBuffer(framebuffer.fbo);
+            ChangeFrameBufferTexture(framebuffer.tex);
+
+            glClearColor(r, g, b, a);
+            glClear((uint)GLClear.GL_COLOR_BUFFER_BIT | (uint)GLClear.GL_DEPTH_BUFFER_BIT);
+        }
+
+        public static void Clear(BlitData blitData, float r, float b, float g, float a)
+        {
+            blitData.MakeCurrent();
+
+            glClearColor(r, g, b, a);
+            glClear((uint)GLClear.GL_COLOR_BUFFER_BIT | (uint)GLClear.GL_DEPTH_BUFFER_BIT);
+        }
+
         public static void Blit(BlitData bData)
         {
+            SwapBuffers(bData.TargetDC);
+        }
+
+        public static void Blit(BlitData bData, GLFramebuffer framebuffer)
+        {
+            ChangeCurrentFrameBuffer(framebuffer.fbo);
+            ChangeFrameBufferTexture(framebuffer.tex);
+
             SwapBuffers(bData.TargetDC);
         }
 
@@ -94,6 +126,26 @@ namespace glcore
                     BindTextures(iptr, iDs.Length);
                 }
             }
+
+            Draw(shader.shaderProgram, 0, (uint)((buffer._size / 4) / buffer.stride), buffer.VAO);
+        }
+
+        public static void Draw(GLFramebuffer framebuffer, GLBuffer buffer, Shader shader)
+        {
+            if (shader.linkedTextures.Count != 0)
+            {
+                uint[] iDs = new uint[shader.linkedTextures.Count];
+                for (int i = 0; i < iDs.Length; i++)
+                    iDs[i] = shader.linkedTextures[i].textureID;
+
+                fixed (uint* iptr = iDs)
+                {
+                    BindTextures(iptr, iDs.Length);
+                }
+            }
+
+            ChangeFrameBufferTexture(framebuffer.tex);
+            ChangeCurrentFrameBuffer(framebuffer.fbo);
 
             Draw(shader.shaderProgram, 0, (uint)((buffer._size / 4) / buffer.stride), buffer.VAO);
         }
@@ -116,6 +168,7 @@ namespace glcore
         internal uint targetVBO, targetVAO;
         internal uint targetTexture;
         internal uint targetShader;
+        internal uint targetFramebuffer;
 
         public void Dispose()
         {
@@ -123,7 +176,7 @@ namespace glcore
                 GLBuffer.DeleteBuffer(targetVAO, targetVBO);
             else if (type == GCType.Texture)
                 GLTexture.DeleteTexture(targetTexture);
-
+            else throw new Exception("Not implemented!");
         }
     }
 
@@ -297,18 +350,20 @@ namespace glcore
         static extern IntPtr wglGetProcAddress([In, MarshalAs(UnmanagedType.LPStr)] string name);
 
         [DllImport("opengl32.dll")]
+        static extern bool wglShareLists(IntPtr hglrc1, IntPtr hglrc2);
+
+
+        [DllImport("opengl32.dll")]
         static extern void glViewport(int x, int y, int width, int height);
-
-
-
 
         [DllImport("opengl32.dll")]
         static extern IntPtr wglMakeCurrent(IntPtr HDC, IntPtr HGLRC);
 
-
         internal IntPtr TargetDC;
         internal IntPtr LinkedHandle;
         internal IntPtr m_hglrc;
+
+        internal IntPtr shared_m_hglrc;
 
         bool disposed = false;
 
@@ -331,6 +386,12 @@ namespace glcore
                 wglDeleteContext(m_hglrc);
                 disposed = true;
             }
+        }
+
+        public void LinkTo(BlitData p1)
+        {
+            wglShareLists(m_hglrc, p1.m_hglrc);
+            p1.m_hglrc = m_hglrc;
         }
 
         public unsafe BlitData(Form TargetForm)
@@ -380,8 +441,72 @@ namespace glcore
 
         }
 
+        public unsafe BlitData(IntPtr formHandle)
+        {
+            LinkedHandle = formHandle;
+            TargetDC = GetDC(formHandle);
+
+            PixelFormatDescriptor pfd = new PixelFormatDescriptor()
+            {
+                Size = (ushort)sizeof(PixelFormatDescriptor),
+                Version = 1,
+                Flags = 0x00000004 | 0x00000020 | 0x00000001, //PFD WINDOW, OPENGL, DBUFFER
+                PixelType = 0, //RGBA
+                DepthBits = 32, //32bit depth
+                LayerType = 0 //PFD_MAIN_PLANE
+            };
+
+            int iPixelFormat;
+
+            if ((iPixelFormat = ChoosePixelFormat(TargetDC, ref pfd)) == 0)
+            {
+                throw new Exception("ChoosePixelFormat Failed");
+            }
+
+            // make that match the device context's current pixel format 
+            if (SetPixelFormat(TargetDC, iPixelFormat, ref pfd) == 0)
+            {
+                throw new Exception("SetPixelFormat Failed");
+            }
+
+            if ((m_hglrc = wglCreateContext(TargetDC)) == IntPtr.Zero)
+            {
+                throw new Exception("wglCreateContext Failed");
+            }
+
+            if ((wglMakeCurrent(TargetDC, m_hglrc)) == IntPtr.Zero)
+            {
+                throw new Exception("wglMakeCurrent Failed");
+            }
+
+            if (GL.Initialize() != 1)
+            {
+                throw new Exception("Failed to Initialize!");
+            }
+
+
+        }
+
+        public void MakeCurrent()
+        {
+            if (shared_m_hglrc != IntPtr.Zero)
+            {
+                if ((wglMakeCurrent(TargetDC, shared_m_hglrc)) == IntPtr.Zero)
+                {
+                    throw new Exception("wglMakeCurrent Failed");
+                }
+            }
+            else
+                if ((wglMakeCurrent(TargetDC, m_hglrc)) == IntPtr.Zero)
+                {
+                    throw new Exception("wglMakeCurrent Failed");
+                }
+        }
+
         public void Resize(int width, int height)
         {
+            MakeCurrent();
+
             glViewport(0, 0, width, height);
         }
     }

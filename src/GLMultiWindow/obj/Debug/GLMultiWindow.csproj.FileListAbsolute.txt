@@ -1,0 +1,10 @@
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLMultiWindow\bin\Debug\GLMultiWindow.exe.config
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLMultiWindow\bin\Debug\GLMultiWindow.exe
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLMultiWindow\bin\Debug\GLMultiWindow.pdb
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLMultiWindow\bin\Debug\GLDraw.dll
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLMultiWindow\bin\Debug\GLDraw.pdb
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLMultiWindow\obj\Debug\GLMultiWindow.csprojResolveAssemblyReference.cache
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLMultiWindow\obj\Debug\GLMultiWindow.exe
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLMultiWindow\obj\Debug\GLMultiWindow.pdb
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLMultiWindow\bin\Debug\Shaders\simpleVS.glsl
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLMultiWindow\bin\Debug\Shaders\simpleFS.glsl

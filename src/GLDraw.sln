@@ -11,6 +11,14 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GLDemo", "GLDemo\GLDemo.csp
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GLDraw", "GLDraw\GLDraw.csproj", "{24C56867-8C64-4711-AC18-4BDA532C3D1F}"
+	ProjectSection(ProjectDependencies) = postProject
+		{1DF6A0EE-2DFC-4C93-89CD-F11F86968A22} = {1DF6A0EE-2DFC-4C93-89CD-F11F86968A22}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GLMultiWindow", "GLMultiWindow\GLMultiWindow.csproj", "{AD54492C-AD57-4AB7-8556-78CF3C47C80B}"
+	ProjectSection(ProjectDependencies) = postProject
+		{1DF6A0EE-2DFC-4C93-89CD-F11F86968A22} = {1DF6A0EE-2DFC-4C93-89CD-F11F86968A22}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -63,6 +71,18 @@ Global
 		{24C56867-8C64-4711-AC18-4BDA532C3D1F}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{24C56867-8C64-4711-AC18-4BDA532C3D1F}.Release|Win32.ActiveCfg = Release|Any CPU
 		{24C56867-8C64-4711-AC18-4BDA532C3D1F}.Release|x86.ActiveCfg = Release|Any CPU
+		{AD54492C-AD57-4AB7-8556-78CF3C47C80B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AD54492C-AD57-4AB7-8556-78CF3C47C80B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AD54492C-AD57-4AB7-8556-78CF3C47C80B}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{AD54492C-AD57-4AB7-8556-78CF3C47C80B}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{AD54492C-AD57-4AB7-8556-78CF3C47C80B}.Debug|Win32.ActiveCfg = Debug|Any CPU
+		{AD54492C-AD57-4AB7-8556-78CF3C47C80B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{AD54492C-AD57-4AB7-8556-78CF3C47C80B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AD54492C-AD57-4AB7-8556-78CF3C47C80B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AD54492C-AD57-4AB7-8556-78CF3C47C80B}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{AD54492C-AD57-4AB7-8556-78CF3C47C80B}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{AD54492C-AD57-4AB7-8556-78CF3C47C80B}.Release|Win32.ActiveCfg = Release|Any CPU
+		{AD54492C-AD57-4AB7-8556-78CF3C47C80B}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

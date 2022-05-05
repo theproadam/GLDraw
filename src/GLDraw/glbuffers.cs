@@ -229,7 +229,12 @@ namespace glcore
         {
             if (!disposed)
             {
-               // DeleteTexture(textureID);
+                GLGC.GCQueue.Add(new GCTarget()
+                {
+                    type = GCType.Texture,
+                    targetTexture = textureID
+                });
+
                 disposed = true;
             }
         }
@@ -254,6 +259,8 @@ namespace glcore
 
             int sD = (int)(textureData.Length % (width * height));
 
+            _width = (int)width;
+            _height = (int)height;
 
             fixed (byte* b = textureData)
             {
@@ -269,6 +276,7 @@ namespace glcore
 
         public GLTexture(Bitmap sourceBitmap, bool flipBlueAndRed = true)
         {
+            //strip the bitmap away from any stupid formats
             Bitmap bitmap = new Bitmap(sourceBitmap);
 
             int sD = Image.GetPixelFormatSize(bitmap.PixelFormat) / 8;
@@ -297,7 +305,9 @@ namespace glcore
                     }
                 }
             }
-            
+
+            _width = bmpWidth;
+            _height = bmpHeight;
 
             CreateTexture(&tID, bmpWidth, bmpHeight, sD, (void*)bmpData.Scan0);
             textureID = tID;
@@ -308,11 +318,76 @@ namespace glcore
             if (GL.CheckError(out t))
                 throw new Exception("Error Occured: " + t.ToString());
         }
-
     }
 
-    public unsafe class GLFramebuffer
-    { 
-        
+    public unsafe class GLFramebuffer : IDisposable
+    {
+        #region PINVOKE
+
+        [DllImport("GLCore.dll", CallingConvention = CallingConvention.Cdecl)]
+        static extern internal int CreateFrameBuffer(uint* rbo, uint* framebuffer, uint* texColBuf, uint width, uint height);
+
+        #endregion
+
+        static GLFramebuffer()
+        {
+            GLGC.Initialize();
+        }
+
+        private int _width;
+        private int _height;
+        private int _stride;
+
+        public int Width { get { return _width; } }
+        public int Height { get { return _height; } }
+        public int Stride { get { return _stride; } }
+
+        internal bool disposed = false;
+
+        internal uint fbo;
+        internal uint rbo;
+        internal uint tex;
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        ~GLFramebuffer()
+        {
+            Dispose(false);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposed)
+            {
+                // DeleteTexture(textureID);
+                disposed = true;
+            }
+        }
+
+        public GLFramebuffer(uint width, uint height)
+        {
+            uint _fbo;
+            uint _rbo;
+            uint _tex;
+
+            if (CreateFrameBuffer(&_rbo, &_fbo, &_tex, width, height) == -1)
+                throw new Exception("Failed To Create Framebuffer: Framebuffer not complete!");
+
+            fbo = _fbo;
+            rbo = _rbo;
+            tex = _tex;
+
+            _width = (int)width;
+            _height = (int)height;
+
+            GLError t;
+            if (GL.CheckError(out t))
+                throw new Exception("Error Occured: " + t.ToString());
+        }
+
     }
 }

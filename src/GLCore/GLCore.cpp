@@ -14,6 +14,12 @@
 #define GL_TEXTURE0 0x84C0
 #define GL_ACTIVE_ATTRIBUTES 0x8B89
 #define GL_ACTIVE_UNIFORMS 0x8B86
+#define GL_FRAMEBUFFER                    0x8D40
+#define GL_RENDERBUFFER                   0x8D41
+#define GL_DEPTH24_STENCIL8               0x88F0
+#define GL_DEPTH_STENCIL_ATTACHMENT       0x821A
+#define GL_FRAMEBUFFER_COMPLETE           0x8CD5
+#define GL_COLOR_ATTACHMENT0              0x8CE0
 
 typedef signed   long  int     GLsizeiptr;
 
@@ -64,7 +70,15 @@ void(__stdcall *glGetActiveAttrib)(GLuint program, GLuint index, GLsizei bufSize
 
 void(__stdcall *glDeleteVertexArrays)(GLsizei n, GLuint *arrays);
 void(__stdcall *glDeleteBuffers)(GLsizei n, GLuint * buffers);
-//void(__stdcall *glDeleteTextures)(GLsizei n, GLuint * textures);
+
+void(__stdcall *glGenFramebuffers)(GLsizei n, GLuint *ids);
+void(__stdcall *glBindFramebuffer)(GLenum target, GLuint framebuffer);
+void(__stdcall *glGenRenderbuffers)(GLsizei n, GLuint *renderbuffers);
+GLenum(__stdcall *glCheckFramebufferStatus)(GLenum target);
+void(__stdcall *glBindRenderbuffer)(GLenum target, GLuint renderbuffer);
+void(__stdcall *glRenderbufferStorage)(GLenum target, GLenum internalformat, GLsizei width, GLsizei height);
+void(__stdcall *glFramebufferRenderbuffer)(GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer);
+void(__stdcall *glFramebufferTexture2D)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
 
 char *vertexShaderSource = "#version 330 core\n"
 "layout (location = 0) in vec3 aPos;\n"
@@ -236,8 +250,6 @@ extern "C"
 	{
 		glDeleteVertexArrays(1, &VAO);
 		glDeleteBuffers(1, &VBO);
-
-		
 	}
 
 	DLL void DeleteTexture(uint textures)
@@ -252,8 +264,6 @@ extern "C"
 
 		glUniform1i(location, textureUnit);
 		
-
-
 		return location;
 	}
 
@@ -270,6 +280,48 @@ extern "C"
 
 		glTexImage2D(GL_TEXTURE_2D, 0, stride == 4 ? GL_RGBA : GL_RGB, width, height, 0, stride == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, data);
 		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+
+	DLL void ChangeCurrentFrameBuffer(unsigned int newFBO)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, newFBO);
+	}
+
+	DLL void ChangeFrameBufferTexture(unsigned int text)
+	{
+		glBindTexture(GL_TEXTURE_2D, text);
+	}
+
+	DLL int CreateFrameBuffer(uint* rbo, uint* framebuffer, uint* texColBuf, uint width, uint height)
+	{
+		glGenFramebuffers(1, framebuffer);
+		glBindFramebuffer(GL_FRAMEBUFFER, *framebuffer);
+
+
+		glGenTextures(1, texColBuf);
+		glBindTexture(GL_TEXTURE_2D, *texColBuf);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *texColBuf, 0);
+
+
+		glGenRenderbuffers(1, rbo);
+		glBindRenderbuffer(GL_RENDERBUFFER, *rbo);
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, *rbo);
+
+		
+		// now that we actually created the framebuffer and added all attachments we want to check if it is actually complete now
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		{
+			return -1;
+		}
+
+		//switch back to default framebuffer!
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		return 0;
 	}
 
 	DLL int SetValue(char* name, unsigned int shaderProgram, int type, void* data)
@@ -309,6 +361,7 @@ extern "C"
 	{
 		glUseProgram(shaderProgram);
 		glBindVertexArray(VAO);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		int hasINDICES = 0;
 
@@ -370,7 +423,7 @@ extern "C"
 
 		//if ((glDrawElements = (void(__stdcall *)(GLenum, GLsizei, GLenum, void*))wglGetProcAddress("glDrawElements")) == NULL) return 0;
 		
-	
+		
 
 		if ((glGetUniformLocation = (GLint(__stdcall *)(GLuint, char*))wglGetProcAddress("glGetUniformLocation")) == NULL)
 			return 0;
@@ -405,8 +458,29 @@ extern "C"
 		if ((glDeleteBuffers = (void(__stdcall *)(GLsizei, GLuint*))wglGetProcAddress("glDeleteBuffers")) == NULL)
 			return 0;
 
-		//if ((glDeleteTextures = (void(__stdcall *)(GLsizei, GLuint*))wglGetProcAddress("glDeleteTextures")) == NULL)
-		//	return 0;
+		if ((glGenFramebuffers = (void(__stdcall *)(GLsizei, GLuint*))wglGetProcAddress("glGenFramebuffers")) == NULL)
+			return 0;
+
+		if ((glBindFramebuffer = (void(__stdcall *)(GLenum, GLuint))wglGetProcAddress("glBindFramebuffer")) == NULL)
+			return 0;
+
+		if ((glGenRenderbuffers = (void(__stdcall *)(GLsizei, GLuint*))wglGetProcAddress("glGenRenderbuffers")) == NULL)
+			return 0;
+
+		if ((glCheckFramebufferStatus = (GLenum(__stdcall *)(GLenum))wglGetProcAddress("glCheckFramebufferStatus")) == NULL)
+			return 0;
+
+		if ((glBindRenderbuffer = (void(__stdcall *)(GLenum, GLuint))wglGetProcAddress("glBindRenderbuffer")) == NULL)
+			return 0;
+
+		if ((glRenderbufferStorage = (void(__stdcall *)(GLenum, GLenum, GLsizei, GLsizei))wglGetProcAddress("glRenderbufferStorage")) == NULL)
+			return 0;
+
+		if ((glFramebufferRenderbuffer = (void(__stdcall *)(GLenum, GLenum, GLenum, GLuint))wglGetProcAddress("glFramebufferRenderbuffer")) == NULL)
+			return 0;
+
+		if ((glFramebufferTexture2D = (void(__stdcall *)(GLenum, GLenum, GLenum, GLuint, GLint))wglGetProcAddress("glFramebufferTexture2D")) == NULL)
+			return 0;
 
 		glEnable(GL_DEPTH_TEST);
 		glEnable(0x809D); //Multisample

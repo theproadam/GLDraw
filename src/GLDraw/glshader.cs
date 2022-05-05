@@ -8,7 +8,7 @@ using glcore.Types;
 
 namespace glcore
 {
-    public unsafe class Shader
+    public unsafe class Shader : IDisposable
     {
         #region PINVOKE
 
@@ -39,6 +39,33 @@ namespace glcore
         internal List<ShaderConfig> uniforms = new List<ShaderConfig>();
 
         internal uint shaderProgram;
+
+        internal bool disposed = false;
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        ~Shader()
+        {
+            Dispose(false);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposed)
+            {
+                GLGC.GCQueue.Add(new GCTarget()
+                {
+                    type = GCType.Shader,
+                    targetShader = shaderProgram
+                });
+
+                disposed = true;
+            }
+        }
 
         public static string CompileLog = "";
 
