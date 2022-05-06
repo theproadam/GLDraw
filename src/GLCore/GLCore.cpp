@@ -95,6 +95,8 @@ char *fragmentShaderSource = "#version 330 core\n"
 
 #define uint unsigned int
 
+bool initialized = false;
+
 enum DataType
 {
 	vec3 = 0,// = 4 * 3,
@@ -124,6 +126,8 @@ extern "C"
 
 	DLL void GetShaderConfig(unsigned int program, int* attributes, int* uniforms)
 	{
+		glUseProgram(program);
+
 		glGetProgramiv(program, GL_ACTIVE_ATTRIBUTES, attributes);
 		glGetProgramiv(program, GL_ACTIVE_UNIFORMS, uniforms);
 	}
@@ -151,6 +155,8 @@ extern "C"
 			return 0;
 		}
 
+		
+
 		// fragment shader
 		unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 		glShaderSource(fragmentShader, 1, &fD, NULL);
@@ -176,6 +182,7 @@ extern "C"
 			*errorCheck = 3;
 			return 0;
 		}
+
 		glDeleteShader(vertexShader);
 		glDeleteShader(fragmentShader);
 
@@ -381,6 +388,10 @@ extern "C"
 
 	DLL int Initialize()
 	{
+		if (initialized)
+			return 1;
+
+
 		if ((glCreateShader = (GLuint(__stdcall *)(GLenum))wglGetProcAddress("glCreateShader")) == NULL) return 0;		
 		if ((glShaderSource = (void(__stdcall *)(GLuint, GLsizei, char**, const GLint*))wglGetProcAddress("glShaderSource")) == NULL) return 0;
 
@@ -486,6 +497,8 @@ extern "C"
 		glEnable(0x809D); //Multisample
 
 	//	glCullFace(GL_FRONT);
+
+		initialized = true;
 
 		return 1;
 	}

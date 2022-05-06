@@ -53,6 +53,12 @@ namespace glcore
             Dispose(false);
         }
 
+        static Shader()
+        {
+            if (!GL.contextReady)
+                throw new Exception("Please create a context before using the shader class!");
+        }
+
         protected virtual void Dispose(bool disposing)
         {
             if (!disposed)
@@ -93,7 +99,7 @@ namespace glcore
 
             compiledShader = new Shader(shaderProgram);
 
-            if (errorCheck != 0)
+            if (errorCheck != 0 || GL.CheckError() != GLError.GL_NO_ERROR)
             {
                 Shader.CompileLog = Encoding.ASCII.GetString(infolog);
                 return false;
@@ -116,6 +122,7 @@ namespace glcore
 
             int length, size, type;
 
+      
             for (int i = 0; i < _uniforms; i++)
             {
                 fixed (byte* bptr = bufT)
@@ -151,7 +158,8 @@ namespace glcore
             fixed (byte* namePtr = targetName)
             {
                 if (SetValue(namePtr, shaderProgram, type, ptr) == -1)
-                    throw new Exception("The attribute \"" + name + "\" was not found in the shader!");
+              //      throw new Exception("The attribute \"" + name + "\" was not found in the shader!");
+                    Console.WriteLine("error");
             }
 
             handle.Free();      

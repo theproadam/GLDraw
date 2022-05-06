@@ -14,6 +14,8 @@ namespace glcore
         internal static int globalThreadID = 0;
         public static bool overrideThreadSafety = false;
 
+        internal static bool contextReady = false;
+
         #region PINVOKE
 
         [DllImport("msvcrt.dll", EntryPoint = "memcpy", CallingConvention = CallingConvention.Cdecl, SetLastError = false)]
@@ -359,6 +361,10 @@ namespace glcore
         [DllImport("opengl32.dll")]
         static extern IntPtr wglMakeCurrent(IntPtr HDC, IntPtr HGLRC);
 
+        [DllImport("opengl32.dll")]
+        static extern void glFlush();
+
+
         internal IntPtr TargetDC;
         internal IntPtr LinkedHandle;
         internal IntPtr m_hglrc;
@@ -390,8 +396,16 @@ namespace glcore
 
         public void LinkTo(BlitData p1)
         {
-            wglShareLists(m_hglrc, p1.m_hglrc);
-            p1.m_hglrc = m_hglrc;
+            MakeCurrent();
+
+            if (m_hglrc == p1.m_hglrc)
+                throw new Exception("The two blitData's already share the same rendering context!");
+
+            if (!wglShareLists(m_hglrc, p1.m_hglrc))
+                throw new Exception("wglShareLists Failed!");
+
+         //   p1.m_hglrc = m_hglrc;
+            p1.shared_m_hglrc = m_hglrc;
         }
 
         public unsafe BlitData(Form TargetForm)
@@ -438,7 +452,7 @@ namespace glcore
                 throw new Exception("Failed to Initialize!");
             }
 
-
+            GL.contextReady = true;
         }
 
         public unsafe BlitData(IntPtr formHandle)
@@ -484,7 +498,51 @@ namespace glcore
                 throw new Exception("Failed to Initialize!");
             }
 
+            GL.contextReady = true;
+        }
 
+        public unsafe BlitData(IntPtr formHandle, BlitData existingContext)
+        {
+            LinkedHandle = formHandle;
+            TargetDC = GetDC(formHandle);
+
+            PixelFormatDescriptor pfd = new PixelFormatDescriptor()
+            {
+                Size = (ushort)sizeof(PixelFormatDescriptor),
+                Version = 1,
+                Flags = 0x00000004 | 0x00000020 | 0x00000001, //PFD WINDOW, OPENGL, DBUFFER
+                PixelType = 0, //RGBA
+                DepthBits = 32, //32bit depth
+                LayerType = 0 //PFD_MAIN_PLANE
+            };
+
+            int iPixelFormat;
+
+            if ((iPixelFormat = ChoosePixelFormat(TargetDC, ref pfd)) == 0)
+            {
+                throw new Exception("ChoosePixelFormat Failed");
+            }
+
+            // make that match the device context's current pixel format 
+            if (SetPixelFormat(TargetDC, iPixelFormat, ref pfd) == 0)
+            {
+                throw new Exception("SetPixelFormat Failed");
+            }
+
+
+            m_hglrc = existingContext.m_hglrc;
+
+            if ((wglMakeCurrent(TargetDC, m_hglrc)) == IntPtr.Zero)
+            {
+                throw new Exception("wglMakeCurrent Failed");
+            }
+
+            if (GL.Initialize() != 1)
+            {
+                throw new Exception("Failed to Initialize!");
+            }
+
+            GL.contextReady = true;
         }
 
         public void MakeCurrent()
@@ -505,9 +563,15 @@ namespace glcore
 
         public void Resize(int width, int height)
         {
+            glFlush();
+
             MakeCurrent();
 
+            glFlush();
+
             glViewport(0, 0, width, height);
+
+            glFlush();
         }
     }
 

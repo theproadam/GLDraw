@@ -22,10 +22,12 @@ namespace GLMultiWindow
             Task.Run(delegate()
             {
                 Form form = new Form();
-                form.ClientSize = startupSize;
+                //form.ClientSize = startupSize;
+                form.ClientSize = resize[index];
+
                 form.FormClosing += form_FormClosing;
                 handle = form.Handle;
-                resize[index] = form.ClientSize;
+              //  resize[index] = form.ClientSize;
 
                 form.Resize += delegate(object sender, EventArgs e)
                 {
@@ -67,7 +69,7 @@ namespace GLMultiWindow
         static Vector3 cameraRotation;
 
 
-        static Size[] resizeData = new Size[2];
+        static Size[] resizeData = new Size[2] { new Size(800,600), new Size(800,600)};
         static bool[] resizeFlag = new bool[2];
 
 
@@ -82,7 +84,7 @@ namespace GLMultiWindow
             blt1 = new BlitData(handle1); blt2 = new BlitData(handle2);
 
             Console.WriteLine("Linking Contexts");
-            blt1.MakeCurrent();
+          //  blt1.MakeCurrent();
             blt1.LinkTo(blt2);
 
             Console.WriteLine("Compiling Shaders");
@@ -94,7 +96,7 @@ namespace GLMultiWindow
             }
 
             Console.WriteLine("Importing Models");
-            STLImporter sImport = new STLImporter("teapot.stl");
+            STLImporter sImport = new STLImporter("coord_system.stl"); //coord_system
             float[] vertexData = STLImporter.AverageUpFaceNormalsAndOutputVertexBuffer(sImport.AllTriangles, 45);
 
             Console.WriteLine("Creating Vertex Buffer Objects");
@@ -115,10 +117,11 @@ namespace GLMultiWindow
         static void RT_RenderFrame()
         {
             //handle resize requests
-            if (resizeFlag[0]) blt1.Resize(resizeData[0].Width, resizeData[0].Height);
-            if (resizeFlag[1]) blt2.Resize(resizeData[1].Width, resizeData[1].Height);
-            resizeFlag[0] = false;
-            resizeFlag[1] = false;
+
+           // if (resizeFlag[0]) blt1.Resize(resizeData[0].Width, resizeData[0].Height);
+          //  if (resizeFlag[1]) blt2.Resize(resizeData[1].Width, resizeData[1].Height);
+          //  resizeFlag[0] = false;
+          //  resizeFlag[1] = false;
 
 
             GL.Clear(blt1, 1, 0.5f, 1, 1);
@@ -134,18 +137,32 @@ namespace GLMultiWindow
             Matrix4x4 projection1 = Matrix4x4.PerspectiveMatrix(90, resizeData[0].Width, resizeData[0].Height, 0.1f, 100);
             Matrix4x4 projection2 = Matrix4x4.PerspectiveMatrix(90, resizeData[1].Width, resizeData[1].Height, 0.1f, 100);
 
+           
             basicShader.SetValue("model", model);
             basicShader.SetValue("view", view);
+            
+            //setlighning
+            basicShader.SetValue("lightPos", new Vector3(-15, 10, -15));
+            basicShader.SetValue("viewPos", cameraPosition);
+            basicShader.SetValue("lightColor", new Vector3(1.0f, 1.0f, 1.0f));
+
 
             //render one
             blt1.MakeCurrent();
-            basicShader.SetValue("projection", projection1);  
+            blt1.Resize(resizeData[0].Width, resizeData[0].Height);
+            basicShader.SetValue("projection", projection1);
+            basicShader.SetValue("objectColor", new Vector3(1.0f, 0.5f, 0f));
             GL.Draw(teapotObject, basicShader);
+            GL.Blit(blt1);
 
+
+            //render two
             blt2.MakeCurrent();
+            blt2.Resize(resizeData[1].Width, resizeData[1].Height);
             basicShader.SetValue("projection", projection2);
+            basicShader.SetValue("objectColor", new Vector3(0.5f, 0.5f, 1f));
             GL.Draw(teapotObject, basicShader);
-
+            GL.Blit(blt2);
 
             GLError error = GL.CheckError();
             if (error != GLError.GL_NO_ERROR)
@@ -156,10 +173,12 @@ namespace GLMultiWindow
 
 
             //blit both!
-            GL.Blit(blt1);
-            GL.Blit(blt2);
+         
+          
 
-            angle += 0.5f;
+           // angle += 0.5f;
+
+            
         }
 
     }
