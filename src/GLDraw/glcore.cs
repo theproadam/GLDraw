@@ -33,6 +33,10 @@ namespace glcore
         [DllImport("opengl32.dll")]
         internal static extern void glClear(uint val);
 
+        [DllImport("opengl32.dll")]
+        internal static extern void glEnable(int val);
+
+
 
         [DllImport("GLCore.dll", CallingConvention = CallingConvention.Cdecl)]
         static extern internal int Initialize();
@@ -51,10 +55,10 @@ namespace glcore
         static extern int GetError();
         
         [DllImport("GLCore.dll", CallingConvention = CallingConvention.Cdecl)]
-        static extern void ChangeCurrentFrameBuffer(uint newFBO);
+        static extern internal void ChangeCurrentFrameBuffer(uint newFBO);
 
         [DllImport("GLCore.dll", CallingConvention = CallingConvention.Cdecl)]
-        static extern void ChangeFrameBufferTexture(uint Tex);
+        static extern internal void ChangeFrameBufferTexture(uint Tex);
 
 
         #endregion
@@ -80,7 +84,6 @@ namespace glcore
 
         public static void Clear(float r, float b, float g, float a)
         {
-            ChangeCurrentFrameBuffer(0);
             glClearColor(r, g, b, a);
             glClear((uint)GLClear.GL_COLOR_BUFFER_BIT | (uint) GLClear.GL_DEPTH_BUFFER_BIT);
         }
@@ -117,17 +120,23 @@ namespace glcore
 
         public static void Draw(GLBuffer buffer, Shader shader)
         {
-            if (shader.linkedTextures.Count != 0)
+            if (shader.linkedTextures.Count != 0 || shader.linkedFramebuffers.Count != 0)
             {
-                uint[] iDs = new uint[shader.linkedTextures.Count];
-                for (int i = 0; i < iDs.Length; i++)
+                uint[] iDs = new uint[shader.linkedTextures.Count + shader.linkedFramebuffers.Count];
+                for (int i = 0; i < shader.linkedTextures.Count; i++)
                     iDs[i] = shader.linkedTextures[i].textureID;
+
+                for (int i = shader.linkedTextures.Count; i < shader.linkedTextures.Count + shader.linkedFramebuffers.Count; i++)
+                    iDs[i] = shader.linkedFramebuffers[i].tex;
+
 
                 fixed (uint* iptr = iDs)
                 {
                     BindTextures(iptr, iDs.Length);
                 }
             }
+
+
 
             Draw(shader.shaderProgram, 0, (uint)((buffer._size / 4) / buffer.stride), buffer.VAO);
         }
@@ -150,6 +159,8 @@ namespace glcore
             ChangeCurrentFrameBuffer(framebuffer.fbo);
 
             Draw(shader.shaderProgram, 0, (uint)((buffer._size / 4) / buffer.stride), buffer.VAO);
+
+            ChangeCurrentFrameBuffer(0);
         }
 
         public static GLError CheckError()
@@ -196,6 +207,10 @@ namespace glcore
 
         public static void Initialize()
         {
+            return;
+
+            throw new Exception("temporarily disabled"); //not implmented correctly :(
+
             if (_initialized)
                 return;
 
@@ -270,6 +285,8 @@ namespace glcore
         }
     }
 
+    #region Enums
+
     internal enum GCType
     { 
         Shader,
@@ -328,7 +345,9 @@ namespace glcore
         GL_COLOR_BUFFER_BIT = 0x00004000
     }
 
-    public class BlitData : IDisposable
+    #endregion
+
+    public partial class BlitData : IDisposable
     {
         [DllImport("user32.dll", SetLastError = true)]
         static extern IntPtr GetDC(IntPtr hWnd);
@@ -455,6 +474,13 @@ namespace glcore
             GL.contextReady = true;
         }
 
+        public void Bind()
+        {
+            GL.ChangeCurrentFrameBuffer(0);
+            GL.ChangeFrameBufferTexture(0);
+
+        }
+
         public unsafe BlitData(IntPtr formHandle)
         {
             LinkedHandle = formHandle;
@@ -572,6 +598,161 @@ namespace glcore
             glViewport(0, 0, width, height);
 
             glFlush();
+        }
+    }
+
+    public enum WGL_ARB
+    {
+        WGL_NUMBER_PIXEL_FORMATS_ARB = 0x2000,
+        WGL_DRAW_TO_WINDOW_ARB = 0x2001,
+        WGL_DRAW_TO_BITMAP_ARB = 0x2002,
+        WGL_ACCELERATION_ARB = 0x2003,
+        WGL_NEED_PALETTE_ARB = 0x2004,
+        WGL_NEED_SYSTEM_PALETTE_ARB = 0x2005,
+        WGL_SWAP_LAYER_BUFFERS_ARB = 0x2006,
+        WGL_SWAP_METHOD_ARB = 0x2007,
+        WGL_NUMBER_OVERLAYS_ARB = 0x2008,
+        WGL_NUMBER_UNDERLAYS_ARB = 0x2009,
+        WGL_TRANSPARENT_ARB = 0x200A,
+        WGL_TRANSPARENT_RED_VALUE_ARB = 0x2037,
+        WGL_TRANSPARENT_GREEN_VALUE_ARB = 0x2038,
+        WGL_TRANSPARENT_BLUE_VALUE_ARB = 0x2039,
+        WGL_TRANSPARENT_ALPHA_VALUE_ARB = 0x203A,
+        WGL_TRANSPARENT_INDEX_VALUE_ARB = 0x203B,
+        WGL_SHARE_DEPTH_ARB = 0x200C,
+        WGL_SHARE_STENCIL_ARB = 0x200D,
+        WGL_SHARE_ACCUM_ARB = 0x200E,
+        WGL_SUPPORT_GDI_ARB = 0x200F,
+        WGL_SUPPORT_OPENGL_ARB = 0x2010,
+        WGL_DOUBLE_BUFFER_ARB = 0x2011,
+        WGL_STEREO_ARB = 0x2012,
+        WGL_PIXEL_TYPE_ARB = 0x2013,
+        WGL_COLOR_BITS_ARB = 0x2014,
+        WGL_RED_BITS_ARB = 0x2015,
+        WGL_RED_SHIFT_ARB = 0x2016,
+        WGL_GREEN_BITS_ARB = 0x2017,
+        WGL_GREEN_SHIFT_ARB = 0x2018,
+        WGL_BLUE_BITS_ARB = 0x2019,
+        WGL_BLUE_SHIFT_ARB = 0x201A,
+        WGL_ALPHA_BITS_ARB = 0x201B,
+        WGL_ALPHA_SHIFT_ARB = 0x201C,
+        WGL_ACCUM_BITS_ARB = 0x201D,
+        WGL_ACCUM_RED_BITS_ARB = 0x201E,
+        WGL_ACCUM_GREEN_BITS_ARB = 0x201F,
+        WGL_ACCUM_BLUE_BITS_ARB = 0x2020,
+        WGL_ACCUM_ALPHA_BITS_ARB = 0x2021,
+        WGL_DEPTH_BITS_ARB = 0x2022,
+        WGL_STENCIL_BITS_ARB = 0x2023,
+        WGL_AUX_BUFFERS_ARB = 0x2024,
+        WGL_NO_ACCELERATION_ARB = 0x2025,
+        WGL_GENERIC_ACCELERATION_ARB = 0x2026,
+        WGL_FULL_ACCELERATION_ARB = 0x2027,
+        WGL_SWAP_EXCHANGE_ARB = 0x2028,
+        WGL_SWAP_COPY_ARB = 0x2029,
+        WGL_SWAP_UNDEFINED_ARB = 0x202A,
+        WGL_TYPE_RGBA_ARB = 0x202B,
+        WGL_TYPE_COLORINDEX_ARB = 0x202C,
+        WGL_SAMPLE_BUFFERS_ARB = 0x2041,
+        WGL_SAMPLES_ARB = 0x2042
+    }
+
+    public unsafe partial class BlitData : IDisposable
+    {
+        [DllImport("GLCore.dll", CallingConvention = CallingConvention.Cdecl)]
+        static extern internal int wglSetPixelFormat(void* DC, int* aList, float* fList, uint nMaxFormats, int* nPixelFormat2, uint* nNumFormat);
+
+
+        public BlitData(object target, params int[] wglConfig)
+        {
+            IntPtr handle;
+            if (target.GetType() == typeof(IntPtr))
+                handle = (IntPtr)target;
+            else if (target.GetType().BaseType == typeof(Control))
+                handle = ((Control)target).Handle;
+            else if (target.GetType().BaseType == typeof(Form))
+                handle = ((Form)target).Handle;
+            else throw new Exception("Target must be a Control/Form or a Handle!");
+
+
+
+            LinkedHandle = handle;
+            TargetDC = GetDC(handle);
+
+            //1. Create Dummy Context
+
+            //dummy context
+            Form dummyForm = new Form();
+            BlitData tempData = new BlitData(dummyForm);
+
+
+            int GL_TRUE = 1;
+
+            int[] piAttribIList = new int[] { 
+                (int)WGL_ARB.WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
+                (int)WGL_ARB.WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
+                (int)WGL_ARB.WGL_COLOR_BITS_ARB, 32,
+                (int)WGL_ARB.WGL_RED_BITS_ARB, 8,
+                (int)WGL_ARB.WGL_GREEN_BITS_ARB, 8,
+                (int)WGL_ARB.WGL_BLUE_BITS_ARB, 8,
+                (int)WGL_ARB.WGL_ALPHA_BITS_ARB, 8,
+                (int)WGL_ARB.WGL_DEPTH_BITS_ARB, 24,
+                (int)WGL_ARB.WGL_STENCIL_BITS_ARB, 0,
+                (int)WGL_ARB.WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
+                (int)WGL_ARB.WGL_PIXEL_TYPE_ARB, (int)WGL_ARB.WGL_TYPE_RGBA_ARB,
+                (int)WGL_ARB.WGL_SAMPLE_BUFFERS_ARB, GL_TRUE,
+                (int)WGL_ARB.WGL_SAMPLES_ARB, 16,
+                0, 0 };
+
+            float[] fList = new float[2];
+
+            int pixelFormat;
+            uint nNumFormats;
+
+            int result;
+
+            fixed (int* iptr = piAttribIList)
+            {
+                fixed (float* fptr = fList)
+                {
+                    result = wglSetPixelFormat((void*)TargetDC, iptr, fptr, 1, &pixelFormat, &nNumFormats);
+                }
+            }
+
+            if (result != 1)
+                throw new Exception("wglSetPixelFormat");
+
+            PixelFormatDescriptor pfd = new PixelFormatDescriptor()
+            {
+                Size = (ushort)sizeof(PixelFormatDescriptor),
+                Version = 1,
+                Flags = 0x00000004 | 0x00000020 | 0x00000001, //PFD WINDOW, OPENGL, DBUFFER
+                PixelType = 0, //RGBA
+                DepthBits = 24, //32bit depth
+                LayerType = 0, //PFD_MAIN_PLANE
+                ColorBits = 32
+                
+            };
+
+
+            // make that match the device context's current pixel format 
+            if (SetPixelFormat(TargetDC, pixelFormat, ref pfd) == 0)
+            {
+                throw new Exception("SetPixelFormat Failed");
+            }
+
+            if ((m_hglrc = wglCreateContext(TargetDC)) == IntPtr.Zero)
+            {
+                throw new Exception("wglCreateContext Failed");
+            }
+
+            if ((wglMakeCurrent(TargetDC, m_hglrc)) == IntPtr.Zero)
+            {
+                throw new Exception("wglMakeCurrent Failed");
+            }
+
+            GL.glEnable(0x0B71);
+            GL.glEnable(0x809D);
+            
         }
     }
 

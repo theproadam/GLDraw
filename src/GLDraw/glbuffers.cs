@@ -327,6 +327,10 @@ namespace glcore
         [DllImport("GLCore.dll", CallingConvention = CallingConvention.Cdecl)]
         static extern internal int CreateFrameBuffer(uint* rbo, uint* framebuffer, uint* texColBuf, uint width, uint height);
 
+        [DllImport("GLCore.dll", CallingConvention = CallingConvention.Cdecl)]
+        static extern internal void CopyFrameBuffer(uint fbo1, uint fbo2, uint tex1, uint tex2, int width, int height);
+
+
         #endregion
 
         static GLFramebuffer()
@@ -389,5 +393,27 @@ namespace glcore
                 throw new Exception("Error Occured: " + t.ToString());
         }
 
+        public void Bind()
+        {
+            GL.ChangeFrameBufferTexture(tex);
+            GL.ChangeCurrentFrameBuffer(fbo);
+        }
+
+        public void CopyInto(GLFramebuffer dest)
+        {
+            if (_width != dest._width)
+                throw new Exception("Widths are not the same!");
+
+            if (_height != dest._height)
+                throw new Exception("Heights are not the same!");
+
+            CopyFrameBuffer(fbo, dest.fbo, tex, dest.tex, _width, _height);
+        }
+
+        public void CopyInto(BlitData defaultFramebuffer)
+        {
+            defaultFramebuffer.MakeCurrent();
+            CopyFrameBuffer(fbo, 0, tex, 0, _width, _height);
+        }
     }
 }

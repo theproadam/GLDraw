@@ -710,6 +710,30 @@ namespace glcore.Types
             return result;
         }
 
+        public static Matrix4x4 ScaleMatrix(Vector3 Scale)
+        {
+            Matrix4x4 result = new Matrix4x4();
+            result.SetIdentityMatrix();
+            result.X0Y0 = Scale.x;
+            result.X1Y1 = Scale.y;
+            result.X2Y2 = Scale.z;
+            result.X3Y3 = 1;
+
+            return result;
+        }
+
+        public static Matrix4x4 ScaleMatrix(float Scale)
+        {
+            Matrix4x4 result = new Matrix4x4();
+            result.SetIdentityMatrix();
+            result.X0Y0 = Scale;
+            result.X1Y1 = Scale;
+            result.X2Y2 = Scale;
+            result.X3Y3 = 1;
+
+            return result;
+        }
+
         public static Matrix4x4 YawMatrix(float zAxisEulerAngle)
         {
             Matrix4x4 result = new Matrix4x4();

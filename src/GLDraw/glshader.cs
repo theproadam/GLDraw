@@ -35,6 +35,8 @@ namespace glcore
         #endregion
 
         internal List<GLTexture> linkedTextures = new List<GLTexture>();
+        internal List<GLFramebuffer> linkedFramebuffers = new List<GLFramebuffer>();
+
         internal List<ShaderConfig> attributes = new List<ShaderConfig>();
         internal List<ShaderConfig> uniforms = new List<ShaderConfig>();
 
@@ -97,14 +99,16 @@ namespace glcore
                 }                
             }
 
-            compiledShader = new Shader(shaderProgram);
-
-            if (errorCheck != 0 || GL.CheckError() != GLError.GL_NO_ERROR)
+            if (errorCheck != 0 || shaderProgram == 0 || GL.CheckError() != GLError.GL_NO_ERROR)
             {
                 Shader.CompileLog = Encoding.ASCII.GetString(infolog);
+                compiledShader = null;
                 return false;
             }
 
+            compiledShader = new Shader(shaderProgram);
+
+         
             return true;
 
         }
@@ -158,8 +162,8 @@ namespace glcore
             fixed (byte* namePtr = targetName)
             {
                 if (SetValue(namePtr, shaderProgram, type, ptr) == -1)
-              //      throw new Exception("The attribute \"" + name + "\" was not found in the shader!");
-                    Console.WriteLine("error");
+                    throw new Exception("The attribute \"" + name + "\" was not found in the shader!");
+                  //  Console.WriteLine("error");
             }
 
             handle.Free();      
@@ -177,6 +181,21 @@ namespace glcore
                 linkedTextures.Add(targetTexture);
             }
         }
+
+        public void LinkTexture(string name, GLFramebuffer framebufferTexture)
+        {
+            byte[] targetName = Encoding.ASCII.GetBytes(name + "\0");
+
+            fixed (byte* namePtr = targetName)
+            {
+                if (LinkTexture(namePtr, shaderProgram, framebufferTexture.tex, (uint)linkedTextures.Count) == -1)
+                    throw new Exception("The attribute \"" + name + "\" was not found in the shader!");
+
+            //    linkedTextures.Add(targetTexture);
+                linkedFramebuffers.Add(framebufferTexture);
+            }
+        }
+
 
         DataType objectToType(object value)
         {

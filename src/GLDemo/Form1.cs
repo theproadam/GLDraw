@@ -30,9 +30,13 @@ namespace GLDemo
         GLBuffer teapot;
         GLTexture myTexture;
 
+
+
         Shader phongShader;
         GLBuffer teapotLightning;
+        GLBuffer quad;
 
+        Shader copyShader;
         GLFramebuffer fbTest;
 
         float rotPos = 0;
@@ -87,6 +91,10 @@ namespace GLDemo
             if (!Shader.Compile(File.ReadAllText(@"Shaders\phongVS.vs"), File.ReadAllText(@"Shaders\phongFS.fs"), out phongShader))
                 throw new Exception("Failed to compile! Reason:\n" + Shader.CompileLog);
 
+            if (!Shader.Compile(File.ReadAllText(@"Shaders\screenVS.vs"), File.ReadAllText(@"Shaders\screenFS.fs"), out copyShader))
+                throw new Exception("Failed to compile! Reason:\n" + Shader.CompileLog);
+
+
             myTexture = new GLTexture(new Bitmap("sampleTexture.png"), true);
             teapotShader.LinkTexture("texture1", myTexture);
             
@@ -111,6 +119,17 @@ namespace GLDemo
            // teapot = ToGLBuffer.ToBuffer(sImport);
            // teapot = square;
 
+            quad = new GLBuffer(new float[] { 
+                -1.0f,  1.0f,  0.0f, 1.0f,
+                -1.0f, -1.0f,  0.0f, 0.0f,
+                 1.0f, -1.0f,  1.0f, 0.0f,
+
+                -1.0f,  1.0f,  0.0f, 1.0f,
+                 1.0f, -1.0f,  1.0f, 0.0f,
+                 1.0f,  1.0f,  1.0f, 1.0f
+            }, typeof(Vector2), typeof(Vector2));
+
+            
             if (false)
             teapot = new GLBuffer(new float[]
             {
@@ -172,6 +191,9 @@ namespace GLDemo
 
             fbTest = new GLFramebuffer(800, 800);
 
+
+            copyShader.LinkTexture("screenTexture", fbTest);
+
             RT = new RenderThread(144);
             RT.RenderFrame += RT_RenderFrame;
 
@@ -201,8 +223,13 @@ namespace GLDemo
             if (!this.IsDisposed)
                 this.Invoke((Action)delegate()
                 {
-                    GL.Clear(0.2f, 0.3f, 0.3f, 1.0f);
-               //     GL.Clear(fbTest, 0.2f, 0.3f, 0.3f, 1.0f);
+                 //   formData.BindDefaultFrameBuffer();
+                 //   GL.Clear(0.2f, 0.3f, 0.3f, 1.0f);
+
+                    fbTest.Bind();
+                   // GL.Clear(0.2f, 0.3f, 0.3f, 1.0f);
+                    GL.Clear(1f, 1f, 1f, 1.0f);
+                   
 
                     model = new Matrix4x4(true);
                     view = inputManager.CreateViewMatrix();
@@ -219,9 +246,16 @@ namespace GLDemo
                         Application.Exit();
                     }
 
+                    fbTest.Bind();
                     GL.Draw(teapotLightning, phongShader);
 
-                   // GL.Draw(fbTest, teapotLightning, phongShader);
+                    formData.Bind();
+                    GL.Clear(0.2f, 0.3f, 0.3f, 1.0f);
+                    GL.Draw(quad, copyShader);
+
+
+                 //   fbTest.CopyInto(formData);
+
                     GL.Blit(formData);
                     this.Text = deltaTime.ToString() + "ms" +", " + inputManager.cameraPosition + ", " + inputManager.cameraRotation;
                 });

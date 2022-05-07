@@ -79,6 +79,13 @@ void(__stdcall *glBindRenderbuffer)(GLenum target, GLuint renderbuffer);
 void(__stdcall *glRenderbufferStorage)(GLenum target, GLenum internalformat, GLsizei width, GLsizei height);
 void(__stdcall *glFramebufferRenderbuffer)(GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer);
 void(__stdcall *glFramebufferTexture2D)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+bool(__stdcall *wglChoosePixelFormatARB)(void* hDC, int* piAttribIList, float* pfAttribFList, unsigned int nMaxFormats, int* piFormats, unsigned int* nNumFormats);
+void(__stdcall *glBlitFramebuffer)(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter);
+
+#define GL_DRAW_FRAMEBUFFER_BINDING       0x8CA6
+#define GL_RENDERBUFFER_BINDING           0x8CA7
+#define GL_READ_FRAMEBUFFER               0x8CA8
+#define GL_DRAW_FRAMEBUFFER               0x8CA9
 
 char *vertexShaderSource = "#version 330 core\n"
 "layout (location = 0) in vec3 aPos;\n"
@@ -114,6 +121,13 @@ enum DataType
 
 extern "C"
 {
+	DLL int wglSetPixelFormat(void* DC, int* aList, float* fList, unsigned int nMaxFormats, int* nPixelFormat2, unsigned int* nNumFormat)
+	{
+		bool result = wglChoosePixelFormatARB(DC, aList, fList, nMaxFormats, nPixelFormat2, nNumFormat);
+
+		return result ? 1 : 0;
+	}
+
 	DLL void GetActiveUniform(unsigned int program, unsigned int index, int bufSize, int* length, int* size, int* type, char* name)
 	{
 		glGetActiveUniform(program, index, bufSize, length, size, (GLenum*)type, name);
@@ -299,6 +313,43 @@ extern "C"
 		glBindTexture(GL_TEXTURE_2D, text);
 	}
 
+	DLL void CopyFrameBuffer(uint fbo1, uint fbo2, uint tex1, uint tex2, int width, int height)
+	{
+
+		int c;
+
+		c = glGetError();
+
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo1);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo1);
+
+		c = glGetError();
+
+		glFramebufferTexture2D(GL_TEXTURE_2D, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex1, 0);
+
+		c = glGetError();
+
+		glDrawBuffer(GL_COLOR_ATTACHMENT0);
+
+		c = glGetError();
+
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo2);
+		glFramebufferTexture2D(GL_TEXTURE_2D, GL_COLOR_ATTACHMENT0 + 1, GL_TEXTURE_2D, tex2, 0);
+		glReadBuffer(GL_COLOR_ATTACHMENT0 + 1);
+
+		c = glGetError();
+
+		glBlitFramebuffer(0, 0, width, height,
+			0, 0, width, height,
+			GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+		c = glGetError();
+
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	}
+
 	DLL int CreateFrameBuffer(uint* rbo, uint* framebuffer, uint* texColBuf, uint width, uint height)
 	{
 		glGenFramebuffers(1, framebuffer);
@@ -308,8 +359,9 @@ extern "C"
 		glGenTextures(1, texColBuf);
 		glBindTexture(GL_TEXTURE_2D, *texColBuf);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *texColBuf, 0);
 
 
@@ -351,6 +403,10 @@ extern "C"
 		{
 			glUniform3fv(location, 1, (float*)data); 
 		}
+		else if (t == int32)
+		{
+			glUniform1i(location, *(int*)data);
+		}
 
 		return location;
 	}
@@ -368,7 +424,7 @@ extern "C"
 	{
 		glUseProgram(shaderProgram);
 		glBindVertexArray(VAO);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		//glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		int hasINDICES = 0;
 
@@ -491,6 +547,13 @@ extern "C"
 			return 0;
 
 		if ((glFramebufferTexture2D = (void(__stdcall *)(GLenum, GLenum, GLenum, GLuint, GLint))wglGetProcAddress("glFramebufferTexture2D")) == NULL)
+			return 0;
+
+
+		if ((wglChoosePixelFormatARB = (bool(__stdcall *)(void*, int*, float*, unsigned int, int*, unsigned int*))wglGetProcAddress("wglChoosePixelFormatARB")) == NULL)
+			return 0;
+
+		if ((glBlitFramebuffer = (void(__stdcall *)(GLint, GLint, GLint, GLint, GLint, GLint, GLint, GLint, GLbitfield, GLenum))wglGetProcAddress("glBlitFramebuffer")) == NULL)
 			return 0;
 
 		glEnable(GL_DEPTH_TEST);

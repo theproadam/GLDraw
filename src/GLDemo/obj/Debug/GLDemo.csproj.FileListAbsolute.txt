@@ -13,3 +13,5 @@ C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\obj\Debug\GLDe
 C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\obj\Debug\GLDemo.pdb
 C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\bin\Debug\Shaders\phongVS.vs
 C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\bin\Debug\Shaders\phongFS.fs
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\bin\Debug\Shaders\screenVS.vs
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\bin\Debug\Shaders\screenFS.fs

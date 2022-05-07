@@ -61,19 +61,26 @@ namespace GLMultiWindow
 
         static Shader basicShader;
         static GLBuffer teapotObject;
-        
+        static GLBuffer sphereObject;
+
         static RenderThread RT;
         static BlitData blt1, blt2;
 
         static Vector3 cameraPosition;
         static Vector3 cameraRotation;
 
-
         static Size[] resizeData = new Size[2] { new Size(800,600), new Size(800,600)};
         static bool[] resizeFlag = new bool[2];
 
-
         static float angle = 0;
+
+        static GLBuffer ImportModel(string path)
+        {
+            STLImporter sImport = new STLImporter(path); //coord_system
+            float[] vertexData = STLImporter.AverageUpFaceNormalsAndOutputVertexBuffer(sImport.AllTriangles, 45f);
+
+            return new GLBuffer(vertexData, basicShader);
+        }
 
         static void Main(string[] args)
         {
@@ -81,7 +88,7 @@ namespace GLMultiWindow
             IntPtr handle1 = CreateForm(0, resizeData, resizeFlag), handle2 = CreateForm(1, resizeData, resizeFlag);
 
             Console.WriteLine("Initializing OpenGL");
-            blt1 = new BlitData(handle1); blt2 = new BlitData(handle2);
+            blt1 = new BlitData(handle1, 1); blt2 = new BlitData(handle2, 1);
 
             Console.WriteLine("Linking Contexts");
           //  blt1.MakeCurrent();
@@ -96,11 +103,8 @@ namespace GLMultiWindow
             }
 
             Console.WriteLine("Importing Models");
-            STLImporter sImport = new STLImporter("coord_system.stl"); //coord_system
-            float[] vertexData = STLImporter.AverageUpFaceNormalsAndOutputVertexBuffer(sImport.AllTriangles, 45);
-
-            Console.WriteLine("Creating Vertex Buffer Objects");
-            teapotObject = new GLBuffer(vertexData, basicShader);
+            teapotObject = ImportModel("teapot.stl");
+            sphereObject = ImportModel("sphere.stl");
 
 
             Console.WriteLine("Starting Render Thread");
@@ -125,27 +129,32 @@ namespace GLMultiWindow
 
 
             GL.Clear(blt1, 1, 0.5f, 1, 1);
-            GL.Clear(blt2, 1, 1, 1, 1);
+            GL.Clear(blt2, 1, 1, 0.5f, 1);
 
             //set cameraPosition, Rotation
             cameraPosition = new Vector3(-40 * (float)Math.Sin(angle * Math.PI / 180d), 35.0f, -40 * (float)Math.Cos(angle * Math.PI / 180d));
+          //  cameraPosition = new Vector3(-40 * (float)Math.Sin(angle * Math.PI / 180d), 0f, -40 * (float)Math.Cos(angle * Math.PI / 180d));
+
+
             cameraRotation = new Vector3(0, 28.75f, angle); //look left = negative
+          //  cameraRotation = new Vector3(0, 0f, angle); //look left = negative
+
 
             Matrix4x4 model = new Matrix4x4(true);
             Matrix4x4 view = (Matrix4x4.RollMatrix(-cameraRotation.y) * Matrix4x4.PitchMatrix(-cameraRotation.z)) * Matrix4x4.TranslationMatrix(-cameraPosition);
 
             Matrix4x4 projection1 = Matrix4x4.PerspectiveMatrix(90, resizeData[0].Width, resizeData[0].Height, 0.1f, 100);
             Matrix4x4 projection2 = Matrix4x4.PerspectiveMatrix(90, resizeData[1].Width, resizeData[1].Height, 0.1f, 100);
-
            
             basicShader.SetValue("model", model);
             basicShader.SetValue("view", view);
             
+
             //setlighning
-            basicShader.SetValue("lightPos", new Vector3(-15, 10, -15));
+            basicShader.SetValue("lightPos", new Vector3(-15, 10, -15) * 10f);
             basicShader.SetValue("viewPos", cameraPosition);
             basicShader.SetValue("lightColor", new Vector3(1.0f, 1.0f, 1.0f));
-
+            basicShader.SetValue("isLight", (int)0);
 
             //render one
             blt1.MakeCurrent();
@@ -153,8 +162,20 @@ namespace GLMultiWindow
             basicShader.SetValue("projection", projection1);
             basicShader.SetValue("objectColor", new Vector3(1.0f, 0.5f, 0f));
             GL.Draw(teapotObject, basicShader);
+
+            //drawSphere
+
+            model = Matrix4x4.TranslationMatrix(new Vector3(-15, 10, -15) * 2f) * Matrix4x4.ScaleMatrix(0.25f);
+            basicShader.SetValue("objectColor", new Vector3(1.0f, 1.0f, 1.0f));
+            basicShader.SetValue("model", model);
+            basicShader.SetValue("isLight", (int)1);
+            GL.Draw(sphereObject, basicShader);
             GL.Blit(blt1);
 
+
+            model = new Matrix4x4(true);
+            basicShader.SetValue("model", model);
+            basicShader.SetValue("isLight", (int)0);
 
             //render two
             blt2.MakeCurrent();
@@ -162,6 +183,13 @@ namespace GLMultiWindow
             basicShader.SetValue("projection", projection2);
             basicShader.SetValue("objectColor", new Vector3(0.5f, 0.5f, 1f));
             GL.Draw(teapotObject, basicShader);
+
+            model = Matrix4x4.TranslationMatrix(new Vector3(-15, 10, -15) * 2f) * Matrix4x4.ScaleMatrix(0.25f);
+            basicShader.SetValue("objectColor", new Vector3(1.0f, 1.0f, 1.0f));
+            basicShader.SetValue("model", model);
+            basicShader.SetValue("isLight", (int)1);
+            GL.Draw(sphereObject, basicShader);
+
             GL.Blit(blt2);
 
             GLError error = GL.CheckError();
@@ -171,14 +199,7 @@ namespace GLMultiWindow
                 Application.Exit();
             }
 
-
-            //blit both!
-         
-          
-
-           // angle += 0.5f;
-
-            
+            angle += 0.5f; 
         }
 
     }
