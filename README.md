@@ -6,4 +6,4 @@ A light-weight wrapper designed to ease OpenGL development with C#
 There is no use of any external libraries (ie. GLAD, GLEW, GLFW). Everything from blitting, function loading, shader compilation, etc is done manually by the library.
 
 ### Sample Screenshots
-![](https://raw.githubusercontent.com/theproadam/GLDraw/main/Images/teapotHR.png)
+![](https://raw.githubusercontent.com/theproadam/GLDraw/main/Images/teapot_msaa.png)
