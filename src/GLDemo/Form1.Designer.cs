@@ -38,13 +38,11 @@
             this.Name = "Form1";
             this.Text = "glDraw Demo";
             this.Load += new System.EventHandler(this.Form1_Load);
-            this.Click += new System.EventHandler(this.Form1_Click);
             this.ResumeLayout(false);
 
         }
 
         #endregion
-
     }
 }
 

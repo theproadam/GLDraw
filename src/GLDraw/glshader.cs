@@ -5,35 +5,12 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using glcore.Types;
+using glcore.gl;
 
 namespace glcore
 {
     public unsafe class Shader : IDisposable
     {
-        #region PINVOKE
-
-
-        [DllImport("GLCore.dll", CallingConvention = CallingConvention.Cdecl)]
-        static extern uint CompileShaders(byte* vsData, byte* fsData, int* errorCheck, byte* errorOutput);
-
-        [DllImport("GLCore.dll", CallingConvention = CallingConvention.Cdecl)]
-        static extern int SetValue(byte* name, uint shaderProgram, int type, void* data);
-
-        [DllImport("GLCore.dll", CallingConvention = CallingConvention.Cdecl)]
-        static extern int LinkTexture(byte* name, uint shaderProgram, uint textureID, uint textureUnit);
-
-        [DllImport("GLCore.dll", CallingConvention = CallingConvention.Cdecl)]
-        static extern void GetActiveUniform(uint program, uint index, int bufSize, int* length, int* size, int* type, byte* name);
-
-        [DllImport("GLCore.dll", CallingConvention = CallingConvention.Cdecl)]
-        static extern void GetActiveAttrib(uint program, uint index, int bufSize, int* length, int* size, int* type, byte* name);
-
-
-        [DllImport("GLCore.dll", CallingConvention = CallingConvention.Cdecl)]
-        static extern void GetShaderConfig(uint program, int* attributes, int* uniforms);
-
-        #endregion
-
         internal List<GLTexture> linkedTextures = new List<GLTexture>();
         internal List<GLFramebuffer> linkedFramebuffers = new List<GLFramebuffer>();
 
@@ -57,28 +34,28 @@ namespace glcore
 
         static Shader()
         {
-            if (!GL.contextReady)
-                throw new Exception("Please create a context before using the shader class!");
+            //if (!GL.contextReady)
+            //    throw new Exception("Please create a context before using the shader class!");
         }
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!disposed)
-            {
-                GLGC.GCQueue.Add(new GCTarget()
-                {
-                    type = GCType.Shader,
-                    targetShader = shaderProgram
-                });
+            //if (!disposed)
+            //{
+            //    GLGC.GCQueue.Add(new GCTarget()
+            //    {
+            //        type = GCType.Shader,
+            //        targetShader = shaderProgram
+            //    });
 
-                disposed = true;
-            }
+            //    disposed = true;
+            //}
         }
 
         public static string CompileLog = "";
 
         public static bool Compile(string VS, string FS, out Shader compiledShader)
-        { 
+        {
             byte[] vsData = Encoding.ASCII.GetBytes(VS + "\0");
             byte[] fsData = Encoding.ASCII.GetBytes(FS + "\0");
 
@@ -96,7 +73,7 @@ namespace glcore
                     {
                         shaderProgram = CompileShaders(vsptr, fsptr, &errorCheck, err);
                     }
-                }                
+                }
             }
 
             if (errorCheck != 0 || shaderProgram == 0 || GL.CheckError() != GLError.GL_NO_ERROR)
@@ -108,7 +85,7 @@ namespace glcore
 
             compiledShader = new Shader(shaderProgram);
 
-         
+
             return true;
 
         }
@@ -124,26 +101,28 @@ namespace glcore
 
             byte[] bufT = new byte[16];
 
-            int length, size, type;
+            int size, length;
+            uint type;
 
-      
             for (int i = 0; i < _uniforms; i++)
             {
                 fixed (byte* bptr = bufT)
-                    GetActiveUniform(sProgram, (uint)i, 16, &length, &size, &type, bptr);
+                 //   GetActiveUniform(sProgram, (uint)i, 16, &length, &size, &type, bptr);
+                    GLFunc.glGetActiveUniform(sProgram, (uint)i, 16, &length, &size, &type, bptr);
 
-                uniforms.Add(new ShaderConfig((GLType)type, size, Encoding.ASCII.GetString(bufT, 0, length)));
+                uniforms.Add(new ShaderConfig((GLType)type, size, Encoding.ASCII.GetString(bufT, 0, (int)length)));
             }
 
-           
+
             for (int i = 0; i < _attribs; i++)
             {
                 fixed (byte* bptr = bufT)
-                    GetActiveAttrib(sProgram, (uint)i, 16, &length, &size, &type, bptr);
+                   // GetActiveAttrib(sProgram, (uint)i, 16, &length, &size, &type, bptr);
+                    GLFunc.glGetActiveAttrib(sProgram, (uint)i, 16, &length, &size, &type, bptr);
 
-                attributes.Add(new ShaderConfig((GLType)type, size, Encoding.ASCII.GetString(bufT, 0, length)));
+                attributes.Add(new ShaderConfig((GLType)type, size, Encoding.ASCII.GetString(bufT, 0, (int)length)));
             }
-            
+
 
             GLError err;
             if (GL.CheckError(out err))
@@ -163,10 +142,10 @@ namespace glcore
             {
                 if (SetValue(namePtr, shaderProgram, type, ptr) == -1)
                     throw new Exception("The attribute \"" + name + "\" was not found in the shader!");
-                  //  Console.WriteLine("error");
+                //  Console.WriteLine("error");
             }
 
-            handle.Free();      
+            handle.Free();
         }
 
         public void LinkTexture(string name, GLTexture targetTexture)
@@ -191,11 +170,126 @@ namespace glcore
                 if (LinkTexture(namePtr, shaderProgram, framebufferTexture.tex, (uint)linkedTextures.Count) == -1)
                     throw new Exception("The attribute \"" + name + "\" was not found in the shader!");
 
-            //    linkedTextures.Add(targetTexture);
+                //    linkedTextures.Add(targetTexture);
                 linkedFramebuffers.Add(framebufferTexture);
             }
         }
 
+        static uint CompileShaders(byte* vsData, byte* fsData, int* errorCheck, byte* infoLog)
+        {
+            const uint GL_FRAGMENT_SHADER = 0x8B30;
+            const uint GL_VERTEX_SHADER = 0x8B31;
+            const uint GL_COMPILE_STATUS = 0x8B81;
+            const uint GL_LINK_STATUS = 0x8B82;
+            int* NULL = (int*)0;
+
+            byte* vD = (byte*)vsData;
+            byte* fD = (byte*)fsData;
+
+            uint vertexShader = GLFunc.glCreateShader(GL_VERTEX_SHADER);
+
+            GLFunc.glShaderSource(vertexShader, 1, &vD, NULL);
+            GLFunc.glCompileShader(vertexShader);
+
+
+
+
+            // check for shader compile errors
+            int success;
+            GLFunc.glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+            if (success == 0)
+            {
+                GLFunc.glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+                *errorCheck = 1;
+                return 0;
+            }
+
+
+
+            // fragment shader
+            uint fragmentShader = GLFunc.glCreateShader(GL_FRAGMENT_SHADER);
+            GLFunc.glShaderSource(fragmentShader, 1, &fD, NULL);
+            GLFunc.glCompileShader(fragmentShader);
+            // check for shader compile errors
+            GLFunc.glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+            if (success == 0)
+            {
+                GLFunc.glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+                *errorCheck = 2;
+                return 0;
+            }
+
+            // link shaders
+            uint shaderProgram = GLFunc.glCreateProgram();
+            GLFunc.glAttachShader(shaderProgram, vertexShader);
+            GLFunc.glAttachShader(shaderProgram, fragmentShader);
+            GLFunc.glLinkProgram(shaderProgram);
+            // check for linking errors
+            GLFunc.glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+            if (success == 0)
+            {
+                GLFunc.glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+                *errorCheck = 3;
+                return 0;
+            }
+
+            GLFunc.glDeleteShader(vertexShader);
+            GLFunc.glDeleteShader(fragmentShader);
+
+            return shaderProgram;
+        }
+
+        static void GetShaderConfig(uint program, int* attributes, int* uniforms)
+        {
+            GLFunc.glUseProgram(program);
+
+            const uint GL_ACTIVE_ATTRIBUTES = 0x8B89;
+            const uint GL_ACTIVE_UNIFORMS = 0x8B86;
+
+            GLFunc.glGetProgramiv(program, GL_ACTIVE_ATTRIBUTES, attributes);
+            GLFunc.glGetProgramiv(program, GL_ACTIVE_UNIFORMS, uniforms);
+        }
+
+        static int LinkTexture(byte* name, uint shaderProgram, uint textureID, uint textureUnit)
+	    {
+		    GLFunc.glUseProgram(shaderProgram);
+            int location = GLFunc.glGetUniformLocation(shaderProgram, name);
+
+            //cast to int valid?
+            GLFunc.glUniform1i(location, (int)textureUnit);
+		
+		    return location;
+	}
+
+        static int SetValue(byte* name, uint shaderProgram, int type, void* data)
+	    {
+		    //probably shouldnt be doing this each time
+		    GLFunc.glUseProgram(shaderProgram);
+
+		    int location = GLFunc.glGetUniformLocation(shaderProgram, name);
+		    DataType t = (DataType)type;
+
+            const byte FALSE = 0;
+
+            if (t == DataType.mat4)
+		    {
+                GLFunc.glUniformMatrix4fv(location, 1, FALSE, (float*)data);
+		    }
+            else if (t == DataType.mat3)
+		    {
+                GLFunc.glUniformMatrix3fv(location, 1, FALSE, (float*)data);
+		    }
+            else if (t == DataType.vec3)
+		    {
+                GLFunc.glUniform3fv(location, 1, (float*)data); 
+		    }
+            else if (t == DataType.int32)
+		    {
+                GLFunc.glUniform1i(location, *(int*)data);
+		    }
+
+		    return location;
+	    }
 
         DataType objectToType(object value)
         {
@@ -250,5 +344,48 @@ namespace glcore
             size = s;
             name = n;
         }
+    }
+
+    public enum GLError
+    {
+        GL_NO_ERROR = 0,
+        GL_INVALID_ENUM = 0x0500,
+        GL_INVALID_VALUE = 0x0501,
+        GL_INVALID_OPERATION = 0x0502,
+        GL_STACK_OVERFLOW = 0x0503,
+        GL_STACK_UNDERFLOW = 0x0504,
+        GL_OUT_OF_MEMORY = 0x0505,
+    }
+
+    public enum GLType
+    {
+        GL_FLOAT_VEC2 = 0x8B50,
+        GL_FLOAT_VEC3 = 0x8B51,
+        GL_FLOAT_VEC4 = 0x8B52,
+        GL_INT_VEC2 = 0x8B53,
+        GL_INT_VEC3 = 0x8B54,
+        GL_INT_VEC4 = 0x8B55,
+        GL_BOOL = 0x8B56,
+        GL_BOOL_VEC2 = 0x8B57,
+        GL_BOOL_VEC3 = 0x8B58,
+        GL_BOOL_VEC4 = 0x8B59,
+        GL_FLOAT_MAT2 = 0x8B5A,
+        GL_FLOAT_MAT3 = 0x8B5B,
+        GL_FLOAT_MAT4 = 0x8B5C,
+        GL_SAMPLER_1D = 0x8B5D,
+        GL_SAMPLER_2D = 0x8B5E,
+        GL_SAMPLER_3D = 0x8B5F,
+        GL_SAMPLER_CUBE = 0x8B60,
+        GL_BYTE = 0x1400,
+        GL_UNSIGNED_BYTE = 0x1401,
+        GL_SHORT = 0x1402,
+        GL_UNSIGNED_SHORT = 0x1403,
+        GL_INT = 0x1404,
+        GL_UNSIGNED_INT = 0x1405,
+        GL_FLOAT = 0x1406,
+        GL_2_BYTES = 0x1407,
+        GL_3_BYTES = 0x1408,
+        GL_4_BYTES = 0x1409,
+        GL_DOUBLE = 0x140A
     }
 }

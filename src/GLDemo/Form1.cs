@@ -9,9 +9,9 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Diagnostics;
 using System.IO;
+
 using glcore;
 using glcore.Types;
-using glextras;
 
 namespace GLDemo
 {
@@ -29,8 +29,6 @@ namespace GLDemo
         Shader teapotShader;
         GLBuffer teapot;
         GLTexture myTexture;
-
-
 
         Shader phongShader;
         GLBuffer teapotLightning;
@@ -78,7 +76,11 @@ namespace GLDemo
             this.FormClosing += Form1_FormClosing;
             this.Resize += Form1_Resize;
             this.ClientSize = new Size(800, 800);
+            this.Click += Form1_Click;
             formData = new BlitData(this);
+
+            GL.Initialize();
+
             inputManager = new InputManager(this);
             inputManager.cameraPosition = new Vector3(0, 0, -1.5f);
 
@@ -97,7 +99,7 @@ namespace GLDemo
 
             myTexture = new GLTexture(new Bitmap("sampleTexture.png"), true);
             teapotShader.LinkTexture("texture1", myTexture);
-            
+
             square = new GLBuffer(new float[]
             {
                  0.5f, 0.5f, 0.0f,   // top right
@@ -108,16 +110,16 @@ namespace GLDemo
                 -0.5f, -0.5f, 0.0f  // bottom left
             }, typeof(Vector3));
 
-            
+
             STLImporter sImport = new STLImporter("teapot.stl");
             teapotLightning = new GLBuffer(STLImporter.AverageUpFaceNormalsAndOutputVertexBuffer(sImport.AllTriangles, 45), phongShader);
 
 
-           // teapotLightning.Dispose();
-           // MessageBox.Show("Test");
+            // teapotLightning.Dispose();
+            // MessageBox.Show("Test");
 
-           // teapot = ToGLBuffer.ToBuffer(sImport);
-           // teapot = square;
+            // teapot = ToGLBuffer.ToBuffer(sImport);
+            // teapot = square;
 
             quad = new GLBuffer(new float[] { 
                 -1.0f,  1.0f,  0.0f, 1.0f,
@@ -129,9 +131,9 @@ namespace GLDemo
                  1.0f,  1.0f,  1.0f, 1.0f
             }, typeof(Vector2), typeof(Vector2));
 
-            
+
             if (false)
-            teapot = new GLBuffer(new float[]
+                teapot = new GLBuffer(new float[]
             {
                  0.5f, 0.5f, 0.0f, 1.0f, 1.0f,   // top right
 		         0.5f, -0.5f, 0.0f, 1.0f, 0.0f,  // bottom right
@@ -143,7 +145,7 @@ namespace GLDemo
 
 
             if (false)
-            teapot = new GLBuffer(new float[]
+                teapot = new GLBuffer(new float[]
             {
                  -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
                  0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
@@ -197,13 +199,13 @@ namespace GLDemo
             RT = new RenderThread(144);
             RT.RenderFrame += RT_RenderFrame;
 
-           // RT.Start();
+            // RT.Start();
         }
 
         void Form1_Resize(object sender, EventArgs e)
         {
             if (formData != null)
-            formData.Resize(this.ClientSize.Width, this.ClientSize.Height);
+                formData.Resize(this.ClientSize.Width, this.ClientSize.Height);
         }
 
         void Form1_FormClosing(object sender, FormClosingEventArgs e)
@@ -223,13 +225,13 @@ namespace GLDemo
             if (!this.IsDisposed)
                 this.Invoke((Action)delegate()
                 {
-                 //   formData.BindDefaultFrameBuffer();
-                 //   GL.Clear(0.2f, 0.3f, 0.3f, 1.0f);
+                    //   formData.BindDefaultFrameBuffer();
+                    //   GL.Clear(0.2f, 0.3f, 0.3f, 1.0f);
 
-                    fbTest.Bind();
-                   // GL.Clear(0.2f, 0.3f, 0.3f, 1.0f);
+                    //    fbTest.Bind();
+                    // GL.Clear(0.2f, 0.3f, 0.3f, 1.0f);
                     GL.Clear(1f, 1f, 1f, 1.0f);
-                   
+
 
                     model = new Matrix4x4(true);
                     view = inputManager.CreateViewMatrix();
@@ -246,18 +248,18 @@ namespace GLDemo
                         Application.Exit();
                     }
 
-                    fbTest.Bind();
+                    //   fbTest.Bind();
                     GL.Draw(teapotLightning, phongShader);
 
-                    formData.Bind();
-                    GL.Clear(0.2f, 0.3f, 0.3f, 1.0f);
-                    GL.Draw(quad, copyShader);
+                    // formData.Bind();
+                    // GL.Clear(0.2f, 0.3f, 0.3f, 1.0f);
+                    //  GL.Draw(quad, copyShader);
 
-
-                 //   fbTest.CopyInto(formData);
+                    // formData.Bind();
+                    // fbTest.CopyInto(formData);
 
                     GL.Blit(formData);
-                    this.Text = deltaTime.ToString() + "ms" +", " + inputManager.cameraPosition + ", " + inputManager.cameraRotation;
+                    this.Text = deltaTime.ToString() + "ms" + ", " + inputManager.cameraPosition + ", " + inputManager.cameraRotation;
                 });
 
             rotPos += 0.5f;
@@ -281,7 +283,7 @@ namespace GLDemo
             mat44.X2Y2 = -1;
             mat44.X3Y2 = -1;
 
-           // projection = Matrix4x4.PerspectiveMatrix(90, 90, 0.3f, 1000) * mat44;
+            // projection = Matrix4x4.PerspectiveMatrix(90, 90, 0.3f, 1000) * mat44;
 
 
 
@@ -290,7 +292,7 @@ namespace GLDemo
             teapotShader.SetValue("view", view);
             teapotShader.SetValue("projection", projection);
 
-         //   GL.Draw(square, myShader);
+            //   GL.Draw(square, myShader);
 
             GL.Draw(teapot, teapotShader);
 
@@ -300,9 +302,9 @@ namespace GLDemo
             sw.Stop();
 
 
-            
+
             this.Text = sw.Elapsed.TotalMilliseconds.ToString() + ", " + GL.CheckError().ToString();
-            
+
         }
     }
 }
