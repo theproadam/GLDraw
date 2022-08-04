@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using glcore.gl;
+using glcore.Types;
 
 namespace glcore
 {
@@ -16,7 +17,14 @@ namespace glcore
 
         public static void Initialize()
         {
+            //initialize dummy context
+            Form dummyForm = new Form();
+            BlitData tempData = new BlitData(dummyForm);
+
+            //load ogl functions
             GLFunc.LoadFunctions();
+
+            //
 
             const int GL_DEPTH_TEST = 0x0B71;
             GLFunc.glEnable(GL_DEPTH_TEST);
@@ -30,34 +38,65 @@ namespace glcore
 
         public unsafe static void Draw(GLBuffer buffer, Shader shader)
         {
-            if (shader.linkedTextures.Count != 0 || shader.linkedFramebuffers.Count != 0)
-            {
-                uint[] iDs = new uint[shader.linkedTextures.Count + shader.linkedFramebuffers.Count];
-                for (int i = 0; i < shader.linkedTextures.Count; i++)
-                    iDs[i] = shader.linkedTextures[i].textureID;
+            GLFunc.glUseProgram(shader.shaderProgram);
 
-                for (int i = shader.linkedTextures.Count; i < shader.linkedTextures.Count + shader.linkedFramebuffers.Count; i++)
-                    iDs[i] = shader.linkedFramebuffers[i].tex;
+            if (shader.linkedTextures.Count != 0 || shader.linkedFramebuffers.Count != 0 || shader.linkedCubemaps.Count != 0)
+            {
+                //uint[] iDs = new uint[shader.linkedTextures.Count + shader.linkedFramebuffers.Count + shader.linkedCubemaps.Count];
+                //for (int i = 0; i < shader.linkedTextures.Count; i++)
+                //    iDs[i] = shader.linkedTextures[i].textureID;
+
+                //for (int i = shader.linkedTextures.Count; i < shader.linkedTextures.Count + shader.linkedFramebuffers.Count; i++)
+                //    iDs[i] = shader.linkedFramebuffers[i].tex;
+
+                //for (int i = shader.linkedTextures.Count + shader.linkedFramebuffers.Count;
+                //    i < shader.linkedTextures.Count + shader.linkedFramebuffers.Count + shader.linkedCubemaps.Count; i++)
+                //    iDs[i] = shader.linkedCubemaps[i].textureID;
+
+                uint o = 0;
 
                 const uint GL_TEXTURE0 = 0x84C0;
                 const uint GL_TEXTURE_2D = 0x0DE1;
+                const uint GL_TEXTURE_CUBEMAP = 0x8513;
 
-                for (int i = 0; i < iDs.Length; i++)
+                for (int i = 0; i < shader.linkedTextures.Count; i++)
                 {
-                     GLFunc.glActiveTexture(GL_TEXTURE0 + (uint)i); //glActiveTexture(GL_TEXTURE0);
-                     GLFunc.glBindTexture(GL_TEXTURE_2D, iDs[i]);
+                    GLFunc.glActiveTexture(GL_TEXTURE0 + (uint)i + o++); //glActiveTexture(GL_TEXTURE0);
+                    GLFunc.glBindTexture(GL_TEXTURE_2D, shader.linkedTextures[i].textureID);
                 }
+
+                for (int i = 0; i < shader.linkedFramebuffers.Count; i++)
+                {
+                    GLFunc.glActiveTexture(GL_TEXTURE0 + (uint)i + o++); //glActiveTexture(GL_TEXTURE0);
+                    GLFunc.glBindTexture(GL_TEXTURE_2D, shader.linkedFramebuffers[i].tex);
+                }
+
+                for (int i = 0; i < shader.linkedCubemaps.Count; i++)
+                {
+                    GLFunc.glActiveTexture(GL_TEXTURE0 + (uint)i + o++); //glActiveTexture(GL_TEXTURE0);
+                    GLFunc.glBindTexture(GL_TEXTURE_CUBEMAP, shader.linkedCubemaps[i].textureID);
+                }
+
+                //for (int i = 0; i < iDs.Length; i++)
+                //{
+                //     GLFunc.glActiveTexture(GL_TEXTURE0 + (uint)i); //glActiveTexture(GL_TEXTURE0);
+                //     GLFunc.glBindTexture(GL_TEXTURE_CUBEMAP, iDs[i]);
+                //}
 
             }
 
             const uint GL_TRIANGLES = 0x0004;
 
-            GLFunc.glUseProgram(shader.shaderProgram);
+            
             GLFunc.glBindVertexArray(buffer.VAO);
-
             GLFunc.glDrawArrays(GL_TRIANGLES, 0, (int)((buffer._size / 4) / buffer.stride));
           //  Draw(shader.shaderProgram, 0, (uint)((buffer._size / 4) / buffer.stride), buffer.VAO);
 
+        }
+
+        public unsafe static void Line3D(Vector3 from, Vector3 to, Vector4 color4f)
+        { 
+            
         }
 
         public static void Blit(BlitData bData)
@@ -75,9 +114,6 @@ namespace glcore
             type = (GLError)GLFunc.glGetError();
             return type != GLError.GL_NO_ERROR;
         }
-
-
-
     }
 
     public enum GLClear
@@ -199,9 +235,6 @@ namespace glcore
 
     public unsafe partial class BlitData : IDisposable
     {
-        [DllImport("GLCore.dll", CallingConvention = CallingConvention.Cdecl)]
-        static extern internal int wglSetPixelFormat(void* DC, int* aList, float* fList, uint nMaxFormats, int* nPixelFormat2, uint* nNumFormat);
-
         public BlitData(object target, params int[] wglConfig)
         {
             IntPtr handle;
@@ -217,12 +250,6 @@ namespace glcore
 
             LinkedHandle = handle;
             TargetDC = GLFunc.GetDC(handle);
-
-            //1. Create Dummy Context
-
-            //dummy context
-            Form dummyForm = new Form();
-            BlitData tempData = new BlitData(dummyForm);
 
 
             int GL_TRUE = 1;
@@ -248,17 +275,18 @@ namespace glcore
             int pixelFormat;
             uint nNumFormats;
 
-            int result;
+            bool result;
 
             fixed (int* iptr = piAttribIList)
             {
                 fixed (float* fptr = fList)
                 {
-                    result = wglSetPixelFormat((void*)TargetDC, iptr, fptr, 1, &pixelFormat, &nNumFormats);
+                    //result = wglSetPixelFormat((void*)TargetDC, iptr, fptr, 1, &pixelFormat, &nNumFormats);
+                    result = GLFunc.wglChoosePixelFormatARB((void*)TargetDC, iptr, fptr, 1, &pixelFormat, &nNumFormats);
                 }
             }
 
-            if (result != 1)
+            if (!result)
                 throw new Exception("wglSetPixelFormat");
 
             PixelFormatDescriptor pfd = new PixelFormatDescriptor()

@@ -100,6 +100,8 @@ namespace GLDemo
             myTexture = new GLTexture(new Bitmap("sampleTexture.png"), true);
             teapotShader.LinkTexture("texture1", myTexture);
 
+            Console.WriteLine(GL.CheckError().ToString());
+
             square = new GLBuffer(new float[]
             {
                  0.5f, 0.5f, 0.0f,   // top right
@@ -143,8 +145,8 @@ namespace GLDemo
                 -0.5f, -0.5f, 0.0f, 0.0f, 0.0f  // bottom left
             }, typeof(Vector3), typeof(Vector2));
 
-
-            if (false)
+            Console.WriteLine(GL.CheckError().ToString());
+          //  if (false)
                 teapot = new GLBuffer(new float[]
             {
                  -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
@@ -193,7 +195,7 @@ namespace GLDemo
 
             fbTest = new GLFramebuffer(800, 800);
 
-
+           
             copyShader.LinkTexture("screenTexture", fbTest);
 
             RT = new RenderThread(144);
@@ -210,7 +212,7 @@ namespace GLDemo
 
         void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            RT.Abort();
+            RT.Stop();
         }
 
         void RT_RenderFrame()
@@ -222,7 +224,8 @@ namespace GLDemo
             inputManager.CalculateMouseInput();
             inputManager.CalcualteKeyboardInput(deltaTime / 66.66f);
 
-            if (!this.IsDisposed)
+            try
+            {
                 this.Invoke((Action)delegate()
                 {
                     //   formData.BindDefaultFrameBuffer();
@@ -237,9 +240,14 @@ namespace GLDemo
                     view = inputManager.CreateViewMatrix();
                     projection = Matrix4x4.PerspectiveMatrix(90, ClientSize.Width, ClientSize.Height, 0.1f, 100);
 
-                    phongShader.SetValue("model", model);
-                    phongShader.SetValue("view", view);
-                    phongShader.SetValue("projection", projection);
+                    //phongShader.SetValue("model", model);
+                    //phongShader.SetValue("view", view);
+                    //phongShader.SetValue("projection", projection);
+                    teapotShader.SetValue("model", model);
+                    teapotShader.SetValue("view", view);
+                    teapotShader.SetValue("projection", projection);
+
+
 
                     GLError error = GL.CheckError();
                     if (error != GLError.GL_NO_ERROR)
@@ -249,7 +257,10 @@ namespace GLDemo
                     }
 
                     //   fbTest.Bind();
-                    GL.Draw(teapotLightning, phongShader);
+                  //  GL.Draw(teapotLightning, phongShader);
+                    GL.Draw(teapot, teapotShader);
+
+
 
                     // formData.Bind();
                     // GL.Clear(0.2f, 0.3f, 0.3f, 1.0f);
@@ -261,13 +272,18 @@ namespace GLDemo
                     GL.Blit(formData);
                     this.Text = deltaTime.ToString() + "ms" + ", " + inputManager.cameraPosition + ", " + inputManager.cameraRotation;
                 });
+            }
+            catch
+            {
+                //FUCK YOU AND YOUR DISPOSED OBJECT
+            }
 
             rotPos += 0.5f;
         }
 
         private void Form1_Click(object sender, EventArgs e)
         {
-            RT.Start();
+            RT.Start(true);
             return;
             Stopwatch sw = new Stopwatch();
 

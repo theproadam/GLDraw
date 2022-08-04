@@ -1,0 +1,5 @@
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\bin\Release\GLDemo.exe.config
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\obj\Release\GLDemo.csprojResolveAssemblyReference.cache
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\obj\Release\GLDemo.Form1.resources
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\obj\Release\GLDemo.Properties.Resources.resources
+C:\Users\Adam\Documents\Visual Studio 2013\Projects\GLDraw\GLDemo\obj\Release\GLDemo.csproj.GenerateResource.Cache

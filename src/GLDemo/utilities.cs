@@ -8,6 +8,7 @@ using System.Windows.Forms;
 using System.Drawing;
 using System.Threading;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.IO;
 
 namespace GLDemo
@@ -235,12 +236,19 @@ namespace GLDemo
 
     public class RenderThread
     {
+        [DllImport("winmm.dll")]
+        public static extern uint timeBeginPeriod(uint uMilliseconds);
+
+        [DllImport("winmm.dll")]
+        public static extern uint timeEndPeriod(uint uMilliseconds);
+
         Thread T;
         bool DontStop = true;
         double TickRate;
         double NextTimeToFire = 0;
         bool finished = false;
         public object RenderLock = new object();
+        bool useSleep = false;
 
         public bool isStopped
         {
@@ -271,16 +279,21 @@ namespace GLDemo
             NextTimeToFire = 0;
         }
 
-        public void Start()
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="useSleepNotBlock">Enables timeBeginPeriod and timeEndPeriod for allow the CPU to sleep, thus highly reducing CPU usage. This may
+        /// have unintended consequences for systems running versions of windows before the Win 10 2004 update </param>
+        public void Start(bool useSleepNotBlock = false)
         {
+            if (T != null && T.IsAlive)
+                return;
+
+            useSleep = useSleepNotBlock;
+
             DontStop = true;
             T = new Thread(RenderCode);
             T.Start();
-        }
-
-        public void Abort()
-        {
-            T.Abort();
         }
 
         public void Stop()
@@ -296,26 +309,44 @@ namespace GLDemo
         void RenderCode()
         {
             Stopwatch sw = new Stopwatch();
-
-            sw.Start();
-            while (DontStop)
+    
+            try
             {
-                if (sw.Elapsed.TotalMilliseconds >= NextTimeToFire)
-                {
-                    NextTimeToFire = sw.Elapsed.TotalMilliseconds + TickRate;
-                    lock (RenderLock)
-                    {
-                        RenderFrame();
-                    }
-                }
-            }
+                if (useSleep)
+                    timeBeginPeriod(1);
 
-            sw.Stop();
-            sw.Reset();
+                sw.Start();
+                while (DontStop)
+                {
+                    if (!DontStop)
+                        break;
+
+                    if (sw.Elapsed.TotalMilliseconds >= NextTimeToFire)
+                    {
+                        NextTimeToFire = sw.Elapsed.TotalMilliseconds + TickRate;
+                        lock (RenderLock)
+                        {
+                            RenderFrame();
+                        }
+                    }
+                    else if (useSleep)
+                        Thread.Sleep(1);
+
+                }
+
+                sw.Stop();
+                sw.Reset();
+            }
+            finally
+            {
+                if (useSleep)
+                    timeEndPeriod(1);
+            }
 
             finished = true;
         }
     }
+
 
     public class STLImporter
     {

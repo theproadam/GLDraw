@@ -102,6 +102,7 @@ namespace glcore.Types
             return x * x + y * y + z * z;
         }
 
+        public static Vector3 zero { get { return new Vector3(0, 0, 0); } }
 
         public void Clamp01()
         {
@@ -201,6 +202,37 @@ namespace glcore.Types
         {
             return Math.Abs(CompareTo.x - x) < EPSILON && Math.Abs(CompareTo.y - y) < EPSILON && Math.Abs(CompareTo.z - z) < EPSILON;
         }
+
+        const float EPSILONM = 1E-4f;
+        public bool isApproximatelyM(Vector3 CompareTo)
+        {
+            return Math.Abs(CompareTo.x - x) < EPSILONM && Math.Abs(CompareTo.y - y) < EPSILONM && Math.Abs(CompareTo.z - z) < EPSILONM;
+        }
+
+        const float EPSILONT = 1E-5f;
+        public bool isApproximatelyT(Vector3 CompareTo)
+        {
+            return Math.Abs(CompareTo.x - x) < EPSILONT && Math.Abs(CompareTo.y - y) < EPSILONT && Math.Abs(CompareTo.z - z) < EPSILONT;
+        }
+
+        const float EPSILONL = 5E-3f;
+        public bool isApproximatelyL(Vector3 CompareTo)
+        {
+            return Math.Abs(CompareTo.x - x) < EPSILONL && Math.Abs(CompareTo.y - y) < EPSILONL && Math.Abs(CompareTo.z - z) < EPSILONL;
+        }
+
+        const float EPSILONLL = 1E-2f;
+        public bool isApproximatelyLL(Vector3 CompareTo)
+        {
+            return Math.Abs(CompareTo.x - x) < EPSILONLL && Math.Abs(CompareTo.y - y) < EPSILONLL && Math.Abs(CompareTo.z - z) < EPSILONLL;
+        }
+
+        const float EPSILONAE = 5E-7f;
+        public bool isApproximatelyAE(Vector3 CompareTo)
+        {
+            return Math.Abs(CompareTo.x - x) < EPSILONAE && Math.Abs(CompareTo.y - y) < EPSILONAE && Math.Abs(CompareTo.z - z) < EPSILONAE;
+        }
+
 
         /// <summary>
         /// Returns a string in the format of "Vector3 X: " + X + ", Y: " + Y + ", Z: " + Z
@@ -310,6 +342,14 @@ namespace glcore.Types
         public float X3Y2;
         public float X3Y3;
 
+        public static Matrix4x4 Identity { get { return IdentityMatrix(); } }
+
+        public static Matrix4x4 IdentityMatrix()
+        {
+            Matrix4x4 mat = new Matrix4x4();
+            mat.SetIdentityMatrix();
+            return mat;
+        }
 
         public static implicit operator Matrix4x4(float[,] input)
         {
@@ -575,7 +615,7 @@ namespace glcore.Types
             return result;
         }
 
-        public static Matrix4x4 PerspectiveMatrix(float hFOV, float vFOV, float zNear, float zFar)
+        public static Matrix4x4 PerspectiveMatrix(float hFOV, float vFOV, float zNear = 0.1f, float zFar = 1000f)
         {
             Matrix4x4 proj = new Matrix4x4();
             const float deg2rad = (float)(Math.PI / 180d);
@@ -618,7 +658,7 @@ namespace glcore.Types
             return proj;
         }
 
-        public static Matrix4x4 PerspectiveMatrix(float hFOV, int viewportWidth, int viewportHeight, float zNear, float zFar)
+        public static Matrix4x4 PerspectiveMatrix(float hFOV, int viewportWidth, int viewportHeight, float zNear = 0.1f, float zFar = 1000f)
         {
             float aspect = (float)viewportWidth / (float)viewportHeight;
 
@@ -634,37 +674,90 @@ namespace glcore.Types
             return 2.0f * (float)Math.Atan(Math.Tan(FOV * 0.5f * deg2rads) / aspectRatio) / deg2rads;
         }
 
-        public static Matrix4x4 OrthographicMatrix(float width, float height, float zNear, float zFar)
+        public static Matrix4x4 OrthographicMatrix(float width, float height, float zNear = 0.1f, float zFar = 1000f)
         {
             Matrix4x4 result = new Matrix4x4();
 
-            result.X0Y0 = 2 / width;
-            result.X1Y1 = 2 / height;
-            result.X2Y2 = -2 * (zFar - zNear);
+            result.X0Y0 = 2f / width;
+            result.X1Y1 = 2f / height;
+            result.X2Y2 = -2f / (zFar - zNear);
             result.X3Y3 = 1;
 
-            result.X0Y3 = 0;
-            result.X1Y3 = 0;
-            result.X2Y3 = -(zFar + zNear) / (zFar - zNear);
+            result.X3Y2 = -(zFar + zNear) / (zFar - zNear);
+
+            //reverse Z
+            result.X2Y0 = -result.X2Y0;
+            result.X2Y1 = -result.X2Y1;
+            result.X2Y2 = -result.X2Y2;
+            result.X2Y3 = -result.X2Y3;
 
             return result;
+
+            return OrthographicMatrix(width / 2f, -width / 2f, height / 2f, -height / 2f, zNear, zFar);
         }
 
         public static Matrix4x4 OrthographicMatrix(float r, float l, float t, float b, float n, float f)
         {
             Matrix4x4 result = new Matrix4x4();
-            result.SetZeroMatrix();
+           // result.SetZeroMatrix();
 
             result.X0Y0 = 2.0f / (r - l);
             result.X1Y1 = 2.0f / (t - b);
-            result.X2Y2 = -2.0f * (f - n);
+            result.X2Y2 = -2.0f / (f - n);
             result.X3Y3 = 1.0f;
 
             result.X3Y0 = -(r + l) / (r - l);
             result.X3Y1 = -(t + b) / (t - b);
-            result.X3Y2 = -(f + n) / (f - n);
+           // result.X3Y2 = 1f;
+          //  result.X3Y2 = -(f + n) / (f - n);
+
+            //result.X0Y0 = 1.0f / r;
+            //result.X1Y1 = 1.0f / t;
+            //result.X2Y2 = -2.0f * (f - n);
+            //result.X3Y3 = 1.0f;
+            //result.X3Y2 = (f + n) / (f - n);
+
+
+
+            result.X2Y0 = -result.X2Y0;
+            result.X2Y1 = -result.X2Y1;
+            result.X2Y2 = -result.X2Y2;
+            result.X2Y3 = -result.X2Y3;
 
             return result;
+        }
+
+        public static Matrix4x4 OrthographicMatrix(float size, int viewportWidth, int viewportHeight, float zNear = 0.1f, float zFar = 1000f)
+        {
+            float aspectRatio = (float)viewportWidth / (float)viewportHeight;
+            return OrthographicMatrix(size, size / aspectRatio, zNear, zFar);
+        }
+
+        public static Matrix4x4 Lerp(Matrix4x4 A, Matrix4x4 B, float C)
+        {
+            float mC = 1f - C;
+
+            return new Matrix4x4() { 
+                X0Y0 = mC * A.X0Y0 + C * B.X0Y0,
+                X1Y0 = mC * A.X1Y0 + C * B.X1Y0,
+                X2Y0 = mC * A.X2Y0 + C * B.X2Y0,
+                X3Y0 = mC * A.X3Y0 + C * B.X3Y0,
+
+                X0Y1 = mC * A.X0Y1 + C * B.X0Y1,
+                X1Y1 = mC * A.X1Y1 + C * B.X1Y1,
+                X2Y1 = mC * A.X2Y1 + C * B.X2Y1,
+                X3Y1 = mC * A.X3Y1 + C * B.X3Y1,
+
+                X0Y2 = mC * A.X0Y2 + C * B.X0Y2,
+                X1Y2 = mC * A.X1Y2 + C * B.X1Y2,
+                X2Y2 = mC * A.X2Y2 + C * B.X2Y2,
+                X3Y2 = mC * A.X3Y2 + C * B.X3Y2,
+
+                X0Y3 = mC * A.X0Y3 + C * B.X0Y3,
+                X1Y3 = mC * A.X1Y3 + C * B.X1Y3,
+                X2Y3 = mC * A.X2Y3 + C * B.X2Y3,
+                X3Y3 = mC * A.X3Y3 + C * B.X3Y3
+            };
         }
 
         public static Matrix4x4 TranslationMatrix(Vector3 Position)
@@ -768,6 +861,35 @@ namespace glcore.Types
 
             return result;
         }
+
+        public Matrix4x4 Transposed()
+        {
+            Matrix4x4 ret = new Matrix4x4();
+
+            ret.X0Y0 = X0Y0;
+            ret.X1Y0 = X0Y1;
+            ret.X2Y0 = X0Y2;
+            ret.X3Y0 = X0Y3;
+
+            ret.X0Y1 = X1Y0;
+            ret.X1Y1 = X1Y1;
+            ret.X2Y1 = X1Y2;
+            ret.X3Y1 = X1Y3;
+
+            ret.X0Y2 = X2Y0;
+            ret.X1Y2 = X2Y1;
+            ret.X2Y2 = X2Y2;
+            ret.X3Y2 = X2Y3;
+
+            ret.X0Y3 = X3Y0;
+            ret.X1Y3 = X3Y1;
+            ret.X2Y3 = X3Y2;
+            ret.X3Y3 = X3Y3;
+
+
+            return ret;
+        }
+
 
         public static Matrix4x4 operator +(Matrix4x4 A, Matrix4x4 B)
         {
@@ -908,6 +1030,15 @@ namespace glcore.Types
                 ptr[8] = 1;
 
             }
+        }
+
+        public static Matrix3x3 Identity { get { return IdentityMatrix(); } }
+
+        public static Matrix3x3 IdentityMatrix()
+        {
+            Matrix3x3 mat = new Matrix3x3();
+            mat.SetIdentityMatrix();
+            return mat;
         }
 
         /// <summary>

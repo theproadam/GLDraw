@@ -7,19 +7,23 @@ using System.Runtime.InteropServices;
 using glcore.Types;
 using glcore.gl;
 
+using System.Threading;
+
 namespace glcore
 {
     public unsafe class Shader : IDisposable
     {
         internal List<GLTexture> linkedTextures = new List<GLTexture>();
         internal List<GLFramebuffer> linkedFramebuffers = new List<GLFramebuffer>();
+        internal List<GLCubemap> linkedCubemaps = new List<GLCubemap>();
+
 
         internal List<ShaderConfig> attributes = new List<ShaderConfig>();
         internal List<ShaderConfig> uniforms = new List<ShaderConfig>();
 
         internal uint shaderProgram;
-
         internal bool disposed = false;
+
 
         public void Dispose()
         {
@@ -40,16 +44,16 @@ namespace glcore
 
         protected virtual void Dispose(bool disposing)
         {
-            //if (!disposed)
-            //{
-            //    GLGC.GCQueue.Add(new GCTarget()
-            //    {
-            //        type = GCType.Shader,
-            //        targetShader = shaderProgram
-            //    });
+            if (!disposed)
+            {
+                //GLFunc.glDeleteShader(shaderProgram);
 
-            //    disposed = true;
-            //}
+                //GLError err;
+                //if (GL.CheckError(out err))
+                //    throw new Exception("GLDraw Error: " + err);
+
+                disposed = true;
+            }
         }
 
         public static string CompileLog = "";
@@ -131,8 +135,6 @@ namespace glcore
 
         public void SetValue(string name, object value)
         {
-            int type = (int)objectToType(value);
-
             GCHandle handle = GCHandle.Alloc(value, GCHandleType.Pinned);
             void* ptr = (void*)handle.AddrOfPinnedObject();
 
@@ -140,9 +142,8 @@ namespace glcore
 
             fixed (byte* namePtr = targetName)
             {
-                if (SetValue(namePtr, shaderProgram, type, ptr) == -1)
+                if (SetValue(namePtr, shaderProgram, value, ptr) == -1)
                     throw new Exception("The attribute \"" + name + "\" was not found in the shader!");
-                //  Console.WriteLine("error");
             }
 
             handle.Free();
@@ -151,23 +152,39 @@ namespace glcore
         public void LinkTexture(string name, GLTexture targetTexture)
         {
             byte[] targetName = Encoding.ASCII.GetBytes(name + "\0");
-
+            int count = linkedFramebuffers.Count + linkedCubemaps.Count + linkedTextures.Count;
+            
             fixed (byte* namePtr = targetName)
             {
-                if (LinkTexture(namePtr, shaderProgram, targetTexture.textureID, (uint)linkedTextures.Count) == -1)
+                if (LinkTexture(namePtr, shaderProgram, targetTexture.textureID, (uint)count) == -1)
                     throw new Exception("The attribute \"" + name + "\" was not found in the shader!");
 
                 linkedTextures.Add(targetTexture);
             }
         }
 
-        public void LinkTexture(string name, GLFramebuffer framebufferTexture)
+        public void LinkCubemap(string name, GLCubemap targetCubemap)
         {
             byte[] targetName = Encoding.ASCII.GetBytes(name + "\0");
+            int count = linkedFramebuffers.Count + linkedCubemaps.Count + linkedTextures.Count;
 
             fixed (byte* namePtr = targetName)
             {
-                if (LinkTexture(namePtr, shaderProgram, framebufferTexture.tex, (uint)linkedTextures.Count) == -1)
+                if (LinkTexture(namePtr, shaderProgram, targetCubemap.textureID, (uint)count) == -1)
+                    throw new Exception("The attribute \"" + name + "\" was not found in the shader!");
+
+                linkedCubemaps.Add(targetCubemap);
+            }
+        }
+
+        public void LinkTexture(string name, GLFramebuffer framebufferTexture)
+        {
+            byte[] targetName = Encoding.ASCII.GetBytes(name + "\0");
+            int count = linkedFramebuffers.Count + linkedCubemaps.Count + linkedTextures.Count;
+
+            fixed (byte* namePtr = targetName)
+            {
+                if (LinkTexture(namePtr, shaderProgram, framebufferTexture.tex, (uint)count) == -1)
                     throw new Exception("The attribute \"" + name + "\" was not found in the shader!");
 
                 //    linkedTextures.Add(targetTexture);
@@ -252,6 +269,7 @@ namespace glcore
 
         static int LinkTexture(byte* name, uint shaderProgram, uint textureID, uint textureUnit)
 	    {
+            //WARNING THIS TEXTURE UNIT SETUP IS NOT CORRECT!!!!
 		    GLFunc.glUseProgram(shaderProgram);
             int location = GLFunc.glGetUniformLocation(shaderProgram, name);
 
@@ -259,68 +277,48 @@ namespace glcore
             GLFunc.glUniform1i(location, (int)textureUnit);
 		
 		    return location;
-	}
+	    }
 
-        static int SetValue(byte* name, uint shaderProgram, int type, void* data)
+        static int SetValue(byte* name, uint shaderProgram, object type, void* data)
 	    {
 		    //probably shouldnt be doing this each time
 		    GLFunc.glUseProgram(shaderProgram);
 
 		    int location = GLFunc.glGetUniformLocation(shaderProgram, name);
-		    DataType t = (DataType)type;
+		    //DataType t = (DataType)type;
+            Type t = type.GetType();
 
             const byte FALSE = 0;
 
-            if (t == DataType.mat4)
-		    {
+            if (t == typeof(Matrix4x4))
+            {
                 GLFunc.glUniformMatrix4fv(location, 1, FALSE, (float*)data);
-		    }
-            else if (t == DataType.mat3)
-		    {
+            }
+            else if (t == typeof(Matrix3x3))
+            {
                 GLFunc.glUniformMatrix3fv(location, 1, FALSE, (float*)data);
-		    }
-            else if (t == DataType.vec3)
-		    {
-                GLFunc.glUniform3fv(location, 1, (float*)data); 
-		    }
-            else if (t == DataType.int32)
-		    {
+            }
+            else if (t == typeof(Vector3))
+            {
+                GLFunc.glUniform3fv(location, 1, (float*)data);
+            }
+            else if (t == typeof(int))
+            {
                 GLFunc.glUniform1i(location, *(int*)data);
-		    }
+            }
+            else if (t == typeof(Vector4))
+            {
+                GLFunc.glUniform4fv(location, 1, (float*)data);
+            }
+            else if (t == typeof(uint))
+            {
+                GLFunc.glUniform1ui(location, *(uint*)data);
+            }
+            else throw new Exception("not implemented!");
 
 		    return location;
 	    }
 
-        DataType objectToType(object value)
-        {
-
-            if (value.GetType() == typeof(Matrix4x4)) return DataType.mat4;
-            else if (value.GetType() == typeof(Vector3)) return DataType.vec3;
-            else if (value.GetType() == typeof(Vector2)) return DataType.vec2;
-            else if (value.GetType() == typeof(float)) return DataType.fp32;
-            else if (value.GetType() == typeof(int)) return DataType.int32;
-            else if (value.GetType() == typeof(Int16)) return DataType.int2;
-            else if (value.GetType() == typeof(Matrix3x3)) return DataType.mat3;
-
-            else throw new Exception("Not a valid object Type!");
-
-
-        }
-
-        enum DataType
-        {
-            vec3 = 0,// = 4 * 3,
-            vec2 = 1,// = 4 * 2,
-            fp32 = 2,// = 4,
-            int32 = 3,// = 4,
-            int2 = 4,// = 4 * 2,
-            byte4 = 5,// = 4,
-            mat4 = 6,
-            mat3 = 7,
-            sampler2D = 8,
-            sampler1D = 9,
-            samplerCube = 10
-        }
 
         internal static int typeToSize(GLType t)
         {

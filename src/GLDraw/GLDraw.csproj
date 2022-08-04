@@ -44,6 +44,7 @@
   <ItemGroup>
     <Compile Include="glbuffer.cs" />
     <Compile Include="glcore.cs" />
+    <Compile Include="glextra.cs" />
     <Compile Include="glfunc.cs" />
     <Compile Include="glshader.cs" />
     <Compile Include="glthread.cs" />

@@ -66,6 +66,8 @@ namespace glcore.gl
         [DllImport("opengl32.dll")]
         public static extern void glTexParameteri(uint target, uint pname, int param);
 
+        [DllImport("opengl32.dll")]
+        public static extern void glLineWidth(float width);
 
 
 
@@ -131,6 +133,9 @@ namespace glcore.gl
         public delegate void GLUniform1i(int location, int v0);
         public static GLUniform1i glUniform1i;
 
+        public delegate void GLUniform1ui(int location, uint v0);
+        public static GLUniform1ui glUniform1ui;
+
         public delegate int GLGetUniformLocation(uint program, byte* name);
         public static GLGetUniformLocation glGetUniformLocation;
 
@@ -194,6 +199,16 @@ namespace glcore.gl
         public delegate void GLGenerateMipmap(uint target);
         public static GLGenerateMipmap glGenerateMipmap;
 
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public delegate bool WGLChoosePixelFormatARB(void* DC, int* aList, float* fList, uint nMaxFormats, int* nPixelFormat2, uint* nNumFormat);
+        public static WGLChoosePixelFormatARB wglChoosePixelFormatARB;
+
+        public delegate void GLUniform4f(int location, float v0, float v1, float v2, float v3);
+        public static GLUniform4f glUniform4f;
+
+        public delegate void GLUniform4fv(int location, int count, float* value);
+        public static GLUniform4fv glUniform4fv;
+
         public static void LoadFunctions()
         {
             //Load glCreateShader
@@ -207,7 +222,7 @@ namespace glcore.gl
             //Load glShaderSource
             IntPtr glShaderSourcePtr;
             if ((glShaderSourcePtr = wglGetProcAddress("glShaderSource")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glShaderSource!");
 
             glShaderSource = (GLShaderSource)Marshal.GetDelegateForFunctionPointer(glShaderSourcePtr, typeof(GLShaderSource));
 
@@ -215,7 +230,7 @@ namespace glcore.gl
             //Load glCompileShader
             IntPtr glCompileShaderPtr;
             if ((glCompileShaderPtr = wglGetProcAddress("glCompileShader")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glCompileShader!");
 
             glCompileShader = (GLCompileShader)Marshal.GetDelegateForFunctionPointer(glCompileShaderPtr, typeof(GLCompileShader));
 
@@ -223,7 +238,7 @@ namespace glcore.gl
             //Load glGetShaderiv
             IntPtr glGetShaderivPtr;
             if ((glGetShaderivPtr = wglGetProcAddress("glGetShaderiv")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glGetShaderiv!");
 
             glGetShaderiv = (GLGetShaderiv)Marshal.GetDelegateForFunctionPointer(glGetShaderivPtr, typeof(GLGetShaderiv));
 
@@ -231,7 +246,7 @@ namespace glcore.gl
             //Load glGetShaderInfoLog
             IntPtr glGetShaderInfoLogPtr;
             if ((glGetShaderInfoLogPtr = wglGetProcAddress("glGetShaderInfoLog")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glGetShaderInfoLog!");
 
             glGetShaderInfoLog = (GLGetShaderInfoLog)Marshal.GetDelegateForFunctionPointer(glGetShaderInfoLogPtr, typeof(GLGetShaderInfoLog));
 
@@ -239,7 +254,7 @@ namespace glcore.gl
             //Load glCreateProgram
             IntPtr glCreateProgramPtr;
             if ((glCreateProgramPtr = wglGetProcAddress("glCreateProgram")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glCreateProgram!");
 
             glCreateProgram = (GLCreateProgram)Marshal.GetDelegateForFunctionPointer(glCreateProgramPtr, typeof(GLCreateProgram));
 
@@ -247,7 +262,7 @@ namespace glcore.gl
             //Load glAttachShader
             IntPtr glAttachShaderPtr;
             if ((glAttachShaderPtr = wglGetProcAddress("glAttachShader")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glAttachShader!");
 
             glAttachShader = (GLAttachShader)Marshal.GetDelegateForFunctionPointer(glAttachShaderPtr, typeof(GLAttachShader));
 
@@ -255,14 +270,14 @@ namespace glcore.gl
             //Load glLinkProgram
             IntPtr glLinkProgramPtr;
             if ((glLinkProgramPtr = wglGetProcAddress("glLinkProgram")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glLinkProgram!");
 
             glLinkProgram = (GLLinkProgram)Marshal.GetDelegateForFunctionPointer(glLinkProgramPtr, typeof(GLLinkProgram));
 
             //Load glGetProgramiv
             IntPtr glGetProgramivPtr;
             if ((glGetProgramivPtr = wglGetProcAddress("glGetProgramiv")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glGetProgramiv!");
 
             glGetProgramiv = (GLGetProgramiv)Marshal.GetDelegateForFunctionPointer(glGetProgramivPtr, typeof(GLGetProgramiv));
 
@@ -270,7 +285,7 @@ namespace glcore.gl
             //Load glDeleteShader
             IntPtr glDeleteShaderPtr;
             if ((glDeleteShaderPtr = wglGetProcAddress("glDeleteShader")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glDeleteShader!");
 
             glDeleteShader = (GLDeleteShader)Marshal.GetDelegateForFunctionPointer(glDeleteShaderPtr, typeof(GLDeleteShader));
 
@@ -278,7 +293,7 @@ namespace glcore.gl
             //Load glGetProgramInfoLog
             IntPtr glGetProgramInfoLogPtr;
             if ((glGetProgramInfoLogPtr = wglGetProcAddress("glGetProgramInfoLog")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glGetProgramInfoLog!");
 
             glGetProgramInfoLog = (GLGetProgramInfoLog)Marshal.GetDelegateForFunctionPointer(glGetProgramInfoLogPtr, typeof(GLGetProgramInfoLog));
 
@@ -286,7 +301,7 @@ namespace glcore.gl
             //Load glGenVertexArrays
             IntPtr glGenVertexArraysPtr;
             if ((glGenVertexArraysPtr = wglGetProcAddress("glGenVertexArrays")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glGenVertexArrays!");
 
             glGenVertexArrays = (GLGenVertexArrays)Marshal.GetDelegateForFunctionPointer(glGenVertexArraysPtr, typeof(GLGenVertexArrays));
 
@@ -294,7 +309,7 @@ namespace glcore.gl
             //Load glGenBuffers
             IntPtr glGenBuffersPtr;
             if ((glGenBuffersPtr = wglGetProcAddress("glGenBuffers")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glGenBuffers!");
 
             glGenBuffers = (GLGenBuffers)Marshal.GetDelegateForFunctionPointer(glGenBuffersPtr, typeof(GLGenBuffers));
 
@@ -302,7 +317,7 @@ namespace glcore.gl
             //Load glBindVertexArray
             IntPtr glBindVertexArrayPtr;
             if ((glBindVertexArrayPtr = wglGetProcAddress("glBindVertexArray")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glBindVertexArray!");
 
             glBindVertexArray = (GLBindVertexArray)Marshal.GetDelegateForFunctionPointer(glBindVertexArrayPtr, typeof(GLBindVertexArray));
 
@@ -310,7 +325,7 @@ namespace glcore.gl
             //Load glBindBuffer
             IntPtr glBindBufferPtr;
             if ((glBindBufferPtr = wglGetProcAddress("glBindBuffer")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glBindBuffer!");
 
             glBindBuffer = (GLBindBuffer)Marshal.GetDelegateForFunctionPointer(glBindBufferPtr, typeof(GLBindBuffer));
 
@@ -318,7 +333,7 @@ namespace glcore.gl
             //Load glBufferData
             IntPtr glBufferDataPtr;
             if ((glBufferDataPtr = wglGetProcAddress("glBufferData")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glBufferData!");
 
             glBufferData = (GLBufferData)Marshal.GetDelegateForFunctionPointer(glBufferDataPtr, typeof(GLBufferData));
 
@@ -326,7 +341,7 @@ namespace glcore.gl
             //Load glVertexAttribPointer
             IntPtr glVertexAttribPointerPtr;
             if ((glVertexAttribPointerPtr = wglGetProcAddress("glVertexAttribPointer")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glVertexAttribPointer!");
 
             glVertexAttribPointer = (GLVertexAttribPointer)Marshal.GetDelegateForFunctionPointer(glVertexAttribPointerPtr, typeof(GLVertexAttribPointer));
 
@@ -334,7 +349,7 @@ namespace glcore.gl
             //Load glEnableVertexAttribArray
             IntPtr glEnableVertexAttribArrayPtr;
             if ((glEnableVertexAttribArrayPtr = wglGetProcAddress("glEnableVertexAttribArray")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glEnableVertexAttribArray!");
 
             glEnableVertexAttribArray = (GLEnableVertexAttribArray)Marshal.GetDelegateForFunctionPointer(glEnableVertexAttribArrayPtr, typeof(GLEnableVertexAttribArray));
 
@@ -342,7 +357,7 @@ namespace glcore.gl
             //Load glUseProgram
             IntPtr glUseProgramPtr;
             if ((glUseProgramPtr = wglGetProcAddress("glUseProgram")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glUseProgram!");
 
             glUseProgram = (GLUseProgram)Marshal.GetDelegateForFunctionPointer(glUseProgramPtr, typeof(GLUseProgram));
 
@@ -350,15 +365,22 @@ namespace glcore.gl
             //Load glUniform1i
             IntPtr glUniform1iPtr;
             if ((glUniform1iPtr = wglGetProcAddress("glUniform1i")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glUniform1i!");
 
             glUniform1i = (GLUniform1i)Marshal.GetDelegateForFunctionPointer(glUniform1iPtr, typeof(GLUniform1i));
+
+            //Load glUniform1ui
+            IntPtr glUniform1uiPtr;
+            if ((glUniform1uiPtr = wglGetProcAddress("glUniform1ui")) == IntPtr.Zero)
+                throw new Exception("Failed To Load glUniform1ui!");
+
+            glUniform1ui = (GLUniform1ui)Marshal.GetDelegateForFunctionPointer(glUniform1uiPtr, typeof(GLUniform1ui));
 
 
             //Load glGetUniformLocation
             IntPtr glGetUniformLocationPtr;
             if ((glGetUniformLocationPtr = wglGetProcAddress("glGetUniformLocation")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glGetUniformLocation!");
 
             glGetUniformLocation = (GLGetUniformLocation)Marshal.GetDelegateForFunctionPointer(glGetUniformLocationPtr, typeof(GLGetUniformLocation));
 
@@ -366,35 +388,35 @@ namespace glcore.gl
             //Load glUniformMatrix4fv
             IntPtr glUniformMatrix4fvPtr;
             if ((glUniformMatrix4fvPtr = wglGetProcAddress("glUniformMatrix4fv")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glUniformMatrix4fv!");
 
             glUniformMatrix4fv = (GLUniformMatrix4fv)Marshal.GetDelegateForFunctionPointer(glUniformMatrix4fvPtr, typeof(GLUniformMatrix4fv));
 
             //Load glUniform3fv
             IntPtr glUniform3fvPtr;
             if ((glUniform3fvPtr = wglGetProcAddress("glUniform3fv")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glUniform3fv!");
 
             glUniform3fv = (GLUniform3fv)Marshal.GetDelegateForFunctionPointer(glUniform3fvPtr, typeof(GLUniform3fv));
 
             //Load glUniformMatrix3fv
             IntPtr glUniformMatrix3fvPtr;
             if ((glUniformMatrix3fvPtr = wglGetProcAddress("glUniformMatrix3fv")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glUniformMatrix3fv!");
 
             glUniformMatrix3fv = (GLUniformMatrix3fv)Marshal.GetDelegateForFunctionPointer(glUniformMatrix3fvPtr, typeof(GLUniformMatrix3fv));
 
             //Load glGetActiveUniform
             IntPtr glGetActiveUniformPtr;
             if ((glGetActiveUniformPtr = wglGetProcAddress("glGetActiveUniform")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glGetActiveUniform!");
 
             glGetActiveUniform = (GLGetActiveUniform)Marshal.GetDelegateForFunctionPointer(glGetActiveUniformPtr, typeof(GLGetActiveUniform));
 
             //Load glGetActiveAttrib
             IntPtr glGetActiveAttribPtr;
             if ((glGetActiveAttribPtr = wglGetProcAddress("glGetActiveAttrib")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glGetActiveAttrib!");
 
             glGetActiveAttrib = (GLGetActiveAttrib)Marshal.GetDelegateForFunctionPointer(glGetActiveAttribPtr, typeof(GLGetActiveAttrib));
 
@@ -402,7 +424,7 @@ namespace glcore.gl
             //Load glDeleteBuffers
             IntPtr glDeleteBuffersPtr;
             if ((glDeleteBuffersPtr = wglGetProcAddress("glDeleteBuffers")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glDeleteBuffers!");
 
             glDeleteBuffers = (GLDeleteBuffers)Marshal.GetDelegateForFunctionPointer(glDeleteBuffersPtr, typeof(GLDeleteBuffers));
 
@@ -410,7 +432,7 @@ namespace glcore.gl
             //Load glDeleteVertexArrays
             IntPtr glDeleteVertexArraysPtr;
             if ((glDeleteVertexArraysPtr = wglGetProcAddress("glDeleteVertexArrays")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glDeleteVertexArrays!");
 
             glDeleteVertexArrays = (GLDeleteVertexArrays)Marshal.GetDelegateForFunctionPointer(glDeleteVertexArraysPtr, typeof(GLDeleteVertexArrays));
 
@@ -418,35 +440,35 @@ namespace glcore.gl
             //Load glBindTexture
             IntPtr glBindTexturePtr;
             if ((glBindTexturePtr = wglGetProcAddress("glBindTexture")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glBindTexture!");
 
             glBindTexture = (GLBindTexture)Marshal.GetDelegateForFunctionPointer(glBindTexturePtr, typeof(GLBindTexture));
 
             //Load glActiveTexture
             IntPtr glActiveTexturePtr;
             if ((glActiveTexturePtr = wglGetProcAddress("glActiveTexture")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glActiveTexture!");
 
             glActiveTexture = (GLActiveTexture)Marshal.GetDelegateForFunctionPointer(glActiveTexturePtr, typeof(GLActiveTexture));
 
             //Load glDrawArrays
             IntPtr glDrawArraysPtr;
             if ((glDrawArraysPtr = wglGetProcAddress("glDrawArrays")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glDrawArrays!");
 
             glDrawArrays = (GLDrawArrays)Marshal.GetDelegateForFunctionPointer(glDrawArraysPtr, typeof(GLDrawArrays));
 
             //Load glGenFramebuffers
             IntPtr glGenFramebuffersPtr;
             if ((glGenFramebuffersPtr = wglGetProcAddress("glGenFramebuffers")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glGenFramebuffers!");
 
             glGenFramebuffers = (GLGenFramebuffers)Marshal.GetDelegateForFunctionPointer(glGenFramebuffersPtr, typeof(GLGenFramebuffers));
 
             //Load glBindFramebuffer
             IntPtr glBindFramebufferPtr;
             if ((glBindFramebufferPtr = wglGetProcAddress("glBindFramebuffer")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glBindFramebuffer!");
 
             glBindFramebuffer = (GLBindFramebuffer)Marshal.GetDelegateForFunctionPointer(glBindFramebufferPtr, typeof(GLBindFramebuffer));
 
@@ -454,49 +476,49 @@ namespace glcore.gl
             //Load glGenRenderbuffers
             IntPtr glGenRenderbuffersPtr;
             if ((glGenRenderbuffersPtr = wglGetProcAddress("glGenRenderbuffers")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glGenRenderbuffers!");
 
             glGenRenderbuffers = (GLGenRenderbuffers)Marshal.GetDelegateForFunctionPointer(glGenRenderbuffersPtr, typeof(GLGenRenderbuffers));
 
             //Load glCheckFramebufferStatus
             IntPtr glCheckFramebufferStatusPtr;
             if ((glCheckFramebufferStatusPtr = wglGetProcAddress("glCheckFramebufferStatus")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glCheckFramebufferStatus!");
 
             glCheckFramebufferStatus = (GLCheckFramebufferStatus)Marshal.GetDelegateForFunctionPointer(glCheckFramebufferStatusPtr, typeof(GLCheckFramebufferStatus));
 
             //Load glBindRenderbuffer
             IntPtr glBindRenderbufferPtr;
             if ((glBindRenderbufferPtr = wglGetProcAddress("glBindRenderbuffer")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glBindRenderbuffer!");
 
             glBindRenderbuffer = (GLBindRenderbuffer)Marshal.GetDelegateForFunctionPointer(glBindRenderbufferPtr, typeof(GLBindRenderbuffer));
 
             //Load glRenderbufferStorage
             IntPtr glRenderbufferStoragePtr;
             if ((glRenderbufferStoragePtr = wglGetProcAddress("glRenderbufferStorage")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glRenderbufferStorage!");
 
             glRenderbufferStorage = (GLRenderbufferStorage)Marshal.GetDelegateForFunctionPointer(glRenderbufferStoragePtr, typeof(GLRenderbufferStorage));
 
             //Load glFramebufferRenderbuffer
             IntPtr glFramebufferRenderbufferPtr;
             if ((glFramebufferRenderbufferPtr = wglGetProcAddress("glFramebufferRenderbuffer")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glFramebufferRenderbuffer!");
 
             glFramebufferRenderbuffer = (GLFramebufferRenderbuffer)Marshal.GetDelegateForFunctionPointer(glFramebufferRenderbufferPtr, typeof(GLFramebufferRenderbuffer));
 
             //Load glFramebufferTexture2D
             IntPtr glFramebufferTexture2DPtr;
             if ((glFramebufferTexture2DPtr = wglGetProcAddress("glFramebufferTexture2D")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glFramebufferTexture2D!");
 
             glFramebufferTexture2D = (GLFramebufferTexture2D)Marshal.GetDelegateForFunctionPointer(glFramebufferTexture2DPtr, typeof(GLFramebufferTexture2D));
 
             //Load glBlitFramebuffer
             IntPtr glBlitFramebufferPtr;
             if ((glBlitFramebufferPtr = wglGetProcAddress("glBlitFramebuffer")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glBlitFramebuffer!");
 
             glBlitFramebuffer = (GLBlitFramebuffer)Marshal.GetDelegateForFunctionPointer(glBlitFramebufferPtr, typeof(GLBlitFramebuffer));
 
@@ -504,9 +526,30 @@ namespace glcore.gl
             //Load glGenerateMipmap
             IntPtr glGenerateMipmapPtr;
             if ((glGenerateMipmapPtr = wglGetProcAddress("glGenerateMipmap")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glCreateShader!");
+                throw new Exception("Failed To Load glGenerateMipmap!");
 
             glGenerateMipmap = (GLGenerateMipmap)Marshal.GetDelegateForFunctionPointer(glGenerateMipmapPtr, typeof(GLGenerateMipmap));
+
+            //Load wglSetPixelFormat
+            IntPtr wglChoosePixelFormatARBPtr;
+            if ((wglChoosePixelFormatARBPtr = wglGetProcAddress("wglChoosePixelFormatARB")) == IntPtr.Zero)
+                throw new Exception("Failed To Load wglChoosePixelFormatARB!");
+
+            wglChoosePixelFormatARB = (WGLChoosePixelFormatARB)Marshal.GetDelegateForFunctionPointer(wglChoosePixelFormatARBPtr, typeof(WGLChoosePixelFormatARB));
+
+            //Load glUniform4f
+            IntPtr glUniform4fPtr;
+            if ((glUniform4fPtr = wglGetProcAddress("glUniform4f")) == IntPtr.Zero)
+                throw new Exception("Failed To Load glUniform4f!");
+
+            glUniform4f = (GLUniform4f)Marshal.GetDelegateForFunctionPointer(glUniform4fPtr, typeof(GLUniform4f));
+
+            //Load glUniform4fv
+            IntPtr glUniform4fvPtr;
+            if ((glUniform4fvPtr = wglGetProcAddress("glUniform4fv")) == IntPtr.Zero)
+                throw new Exception("Failed To Load glUniform4fv!");
+
+            glUniform4fv = (GLUniform4fv)Marshal.GetDelegateForFunctionPointer(glUniform4fvPtr, typeof(GLUniform4fv));
         }
     }
 

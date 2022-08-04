@@ -38,12 +38,13 @@ namespace glcore
             if (!disposed)
             {
                 //dispose here
-                //GLGC.GCQueue.Add(new GCTarget()
-                //{
-                //    type = GCType.Buffer,
-                //    targetVAO = VAO,
-                //    targetVBO = VBO
-                //});
+                uint _VAO = VAO;
+                uint _VBO = VBO;
+
+                //crash due to GC running on another thread :(
+
+                //GLFunc.glDeleteVertexArrays(1, &_VAO);
+                //GLFunc.glDeleteBuffers(1, &_VBO);
 
                 disposed = true;
             }
@@ -294,7 +295,6 @@ namespace glcore
             BitmapData bmpData = bitmap.LockBits(new Rectangle(0, 0, bmpWidth, bmpHeight), ImageLockMode.ReadWrite, bitmap.PixelFormat);
 
             uint tID;
-
             byte* bptr = (byte*)bmpData.Scan0;
 
             if (flipBlueAndRed)
@@ -447,6 +447,106 @@ namespace glcore
             GLFunc.glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
             return 0;
+        }
+    }
+
+    public unsafe class GLCubemap
+    {
+        internal bool disposed = false;
+        public uint textureID;
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        ~GLCubemap()
+        {
+            Dispose(false);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposed)
+            {
+                //GLGC.GCQueue.Add(new GCTarget()
+                //{
+                //    type = GCType.Texture,
+                //    targetTexture = textureID
+                //});
+
+                disposed = true;
+            }
+        }
+
+        public void DeleteTexture()
+        {
+            uint tex = textureID;
+            GLFunc.glDeleteTextures(1, &tex);
+        }
+
+        public GLCubemap(string px, string nx, string py, string ny, string pz, string nz, bool flipBlueAndRed = true)
+        {
+            uint tID;
+            const uint GL_TEXTURE_CUBE_MAP = 0x8513;
+            const uint GL_TEXTURE_CUBE_MAP_POSITIVE_X = 0x8515;
+            const int GL_RGB = 0x1907;
+            const uint GL_UNSIGNED_BYTE = 0x1401;
+
+            Bitmap[] data = { new Bitmap(px), new Bitmap(nx), new Bitmap(py), new Bitmap(ny), new Bitmap(pz), new Bitmap(nz) };
+
+            GLFunc.glGenTextures(1, &tID);
+            GLFunc.glBindTexture(GL_TEXTURE_CUBE_MAP, tID);
+
+            for (int i = 0; i < 6; i++)
+            {
+                int bmpWidth = data[i].Width, bmpHeight = data[i].Height;
+                BitmapData bmpData = data[i].LockBits(new Rectangle(0, 0, bmpWidth, bmpHeight), ImageLockMode.ReadWrite, data[i].PixelFormat);
+                int sD = Image.GetPixelFormatSize(data[i].PixelFormat) / 8;
+
+                if (!(sD == 4 || sD == 3))
+                    throw new Exception("not yet supported!");
+
+                byte* bptr = (byte*)bmpData.Scan0;
+
+                if (flipBlueAndRed)
+                {
+                    for (int h = 0; h < bmpHeight; h++)
+                    {
+                        for (int w = 0; w < bmpWidth; w++)
+                        {
+                            byte* target = bptr + h * bmpWidth * sD + sD * w;
+                            byte temp = target[0];
+                            target[0] = target[2];
+                            target[2] = temp;
+                        }
+                    }
+                }
+
+                //GLFunc.glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + 0, 0, GL_RGB, bmpWidth, bmpHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, (void*)bptr);
+
+                GLFunc.glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + (uint)i, 0, sD == 4 ? 0x1908 : 0x1907, 
+                    bmpWidth, bmpHeight, 0, sD == 4 ? (uint)0x1908 : (uint)0x1907, 0x1401, (void*)bptr);
+
+                data[i].UnlockBits(bmpData);
+            }
+
+            const uint GL_TEXTURE_MAG_FILTER = 0x2800;
+            const uint GL_TEXTURE_MIN_FILTER = 0x2801;
+            const int GL_LINEAR = 0x2601;
+
+            GLFunc.glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            GLFunc.glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            GLFunc.glTexParameteri(GL_TEXTURE_CUBE_MAP, 0x2802, 0x812F);
+            GLFunc.glTexParameteri(GL_TEXTURE_CUBE_MAP, 0x2803, 0x812F);
+            GLFunc.glTexParameteri(GL_TEXTURE_CUBE_MAP, 0x8072, 0x812F);
+
+
+            GLError t;
+            if (GL.CheckError(out t))
+                throw new Exception("Error Occured: " + t.ToString());
+            textureID = tID;
         }
     }
 }
