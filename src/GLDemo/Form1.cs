@@ -228,10 +228,10 @@ namespace GLDemo
             {
                 this.Invoke((Action)delegate()
                 {
-                    //   formData.BindDefaultFrameBuffer();
+                     //  formData.BindDefaultFrameBuffer();
                     //   GL.Clear(0.2f, 0.3f, 0.3f, 1.0f);
 
-                    //    fbTest.Bind();
+                     //   fbTest.Bind();
                     // GL.Clear(0.2f, 0.3f, 0.3f, 1.0f);
                     GL.Clear(1f, 1f, 1f, 1.0f);
 

@@ -97,6 +97,30 @@ namespace glcore.Types
             return A.x < B & A.y < B & A.z < B;
         }
 
+        public static Vector3 Slerp(Vector3 start, Vector3 end, float percent)
+        {
+            // Dot product - the cosine of the angle between 2 vectors.
+            float dot = Vector3.Dot(start, end);
+
+            // Clamp it to be in the range of Acos()
+            // This may be unnecessary, but floating point
+            // precision can be a fickle mistress.
+            //Math.Clamp(dot, -1.0f, 1.0f);
+            if (dot < -1.0f) dot = -1.0f;
+            else if (dot > 1.0f) dot = 1.0f;
+
+            // Acos(dot) returns the angle between start and end,
+            // And multiplying that by percent returns the angle between
+            // start and the final result.
+            float theta = (float)Math.Acos(dot) * percent;
+            Vector3 RelativeVec = end - start * dot;
+            RelativeVec = Vector3.Normalize(RelativeVec);
+
+            // Orthonormal basis
+            // The final result.
+            return ((start * (float)Math.Cos(theta)) + (RelativeVec * (float)Math.Sin(theta)));
+        }
+
         public float sqrMagnitude()
         {
             return x * x + y * y + z * z;
@@ -174,6 +198,29 @@ namespace glcore.Types
             return new Vector3(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t);
         }
 
+        /// <summary>
+        /// Calculates the squared 3 dimensional distance between point A and Point B
+        /// </summary>
+        /// <param name="From">Point A</param>
+        /// <param name="To">Point B</param>
+        /// <returns></returns>
+        public static float DistanceSquared(Vector3 From, Vector3 To)
+        {
+            return (float)(Math.Pow(From.x - To.x, 2) + Math.Pow(From.y - To.y, 2) + Math.Pow(From.z - To.z, 2));
+        }
+
+
+        public static bool operator ==(Vector3 A, Vector3 B)
+        {
+            return A.x == B.x && A.y == B.y && A.z == B.z;
+        }
+
+        public static bool operator !=(Vector3 A, Vector3 B)
+        {
+            return A.x != B.x || A.y != B.y || A.z != B.z;
+        }
+
+
         public static Vector3 operator -(Vector3 A)
         {
             return new Vector3(-A.x, -A.y, -A.z);
@@ -187,6 +234,11 @@ namespace glcore.Types
         public static float Magnitude(Vector3 vector)
         {
             return (float)Math.Sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z);
+        }
+
+        public float Magnitude()
+        {
+            return (float)Math.Sqrt(x * x + y * y + z * z);
         }
 
         public static Vector3 Cross(Vector3 lhs, Vector3 rhs)
@@ -791,7 +843,7 @@ namespace glcore.Types
             result.X0Y0 = Scale;
             result.X1Y1 = Scale;
             result.X2Y2 = Scale;
-            result.X3Y3 = 1;
+            result.X3Y3 = 1f;
 
             return result;
         }
@@ -890,6 +942,43 @@ namespace glcore.Types
             return ret;
         }
 
+        public Matrix3x3 ToMatrix3x3()
+        {
+            Matrix3x3 ret = new Matrix3x3();
+            ret.X0Y0 = X0Y0;
+            ret.X1Y0 = X1Y0;
+            ret.X2Y0 = X2Y0;
+
+            ret.X0Y1 = X0Y1;
+            ret.X1Y1 = X1Y1;
+            ret.X2Y1 = X2Y1;
+
+            ret.X0Y2 = X0Y2;
+            ret.X1Y2 = X1Y2;
+            ret.X2Y0 = X2Y2;
+
+            return ret;
+        }
+
+        public Matrix4x4 TranslateScaleOnly()
+        {
+            return new Matrix4x4()
+            {
+                X0Y0 = 1,
+                X1Y1 = 1,
+                X2Y2 = 1,
+
+                X0Y3 = this.X0Y3,
+                X1Y3 = this.X1Y3,
+                X2Y3 = this.X2Y3,
+
+                X3Y0 = this.X3Y0,
+                X3Y1 = this.X3Y1,
+                X3Y2 = this.X3Y2,
+
+                X3Y3 = this.X3Y3
+            };
+        }
 
         public static Matrix4x4 operator +(Matrix4x4 A, Matrix4x4 B)
         {
@@ -1147,6 +1236,52 @@ namespace glcore.Types
             return result;
         }
 
+        public Matrix3x3 Transposed()
+        {
+            Matrix3x3 ret = new Matrix3x3();
+
+            ret.X0Y0 = X0Y0;
+            ret.X1Y0 = X0Y1;
+            ret.X2Y0 = X0Y2;
+
+            ret.X0Y1 = X1Y0;
+            ret.X1Y1 = X1Y1;
+            ret.X2Y1 = X1Y2;
+
+            ret.X0Y2 = X2Y0;
+            ret.X1Y2 = X2Y1;
+            ret.X2Y2 = X2Y2;
+
+            return ret;
+        }
+
+        public static Matrix3x3 RotationFromNormalTangent(Vector3 direction, Vector3 up = default(Vector3))
+        {
+            if (direction.isApproximately(up))
+                return Matrix3x3.IdentityMatrix();
+
+            if (up.Equals(new Vector3(0, 0, 0))) up = new Vector3(0, 0, 1);
+
+            Vector3 xaxis = Vector3.Normalize(Vector3.Cross(up, direction));
+            Vector3 yaxis = Vector3.Normalize(Vector3.Cross(direction, xaxis));
+
+            Matrix3x3 mat3 = new Matrix3x3()
+            {
+                X0Y0 = xaxis.x,
+                X1Y0 = yaxis.x,
+                X2Y0 = direction.x,
+
+                X0Y1 = xaxis.y,
+                X1Y1 = yaxis.y,
+                X2Y1 = direction.y,
+
+                X0Y2 = xaxis.z,
+                X1Y2 = yaxis.z,
+                X2Y2 = direction.z
+            };
+
+            return mat3;
+        }
 
         public static Matrix3x3 FromDirectionVector_transposed(Vector3 direction, Vector3 up)
         {

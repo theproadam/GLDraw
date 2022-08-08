@@ -17,6 +17,7 @@ namespace glcore
         internal List<GLFramebuffer> linkedFramebuffers = new List<GLFramebuffer>();
         internal List<GLCubemap> linkedCubemaps = new List<GLCubemap>();
 
+        internal List<GLRenderBuffer> linkedRBO = new List<GLRenderBuffer>();
 
         internal List<ShaderConfig> attributes = new List<ShaderConfig>();
         internal List<ShaderConfig> uniforms = new List<ShaderConfig>();
@@ -171,7 +172,6 @@ namespace glcore
             fixed (byte* namePtr = targetName)
             {
                 if (LinkTexture(namePtr, shaderProgram, targetCubemap.textureID, (uint)count) == -1)
-                    throw new Exception("The attribute \"" + name + "\" was not found in the shader!");
 
                 linkedCubemaps.Add(targetCubemap);
             }
@@ -190,6 +190,12 @@ namespace glcore
                 //    linkedTextures.Add(targetTexture);
                 linkedFramebuffers.Add(framebufferTexture);
             }
+        }
+
+        public void LinkRenderBuffer(GLRenderBuffer buffer)
+        { 
+            //GLFunc.glDrawBuffers(2, )
+            linkedRBO.Add(buffer);
         }
 
         static uint CompileShaders(byte* vsData, byte* fsData, int* errorCheck, byte* infoLog)

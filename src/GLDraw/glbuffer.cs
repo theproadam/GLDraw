@@ -7,6 +7,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using glcore.gl;
+using glcore.Enums;
 
 namespace glcore
 {
@@ -447,6 +448,211 @@ namespace glcore
             GLFunc.glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
             return 0;
+        }
+    }
+
+    public unsafe class GLRenderBuffer
+    {
+        private int _width;
+        private int _height;
+
+        public int Width { get { return _width; } }
+        public int Height { get { return _height; } }
+
+        public RBO[] SavedTypes { get { return linked.ToArray(); } }
+
+        internal bool disposed = false;
+
+        internal uint rbo;
+        internal uint dep;
+
+        internal RBO[] linked;
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        ~GLRenderBuffer()
+        {
+            Dispose(false);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposed)
+            {
+                // DeleteTexture(textureID);
+                disposed = true;
+            }
+        }
+
+        public void DeleteBuffer()
+        {
+            GLFunc.glBindFramebuffer(GLEnum.GL_FRAMEBUFFER, rbo);
+
+            for (int i = 0; i < linked.Length; i++)
+            {
+                GLFunc.glBindTexture(GLEnum.GL_TEXTURE_2D_MULTISAMPLE, linked[i].bufferID);
+                uint val = linked[i].bufferID;
+                GLFunc.glDeleteTextures(1, &val);
+            }
+
+            GLFunc.glBindRenderbuffer(GLEnum.GL_RENDERBUFFER, rbo);
+            uint val0 = rbo;
+            GLFunc.glDeleteRenderbuffers(1, &val0);
+
+            GLFunc.glDeleteFramebuffers(1, &val0);
+            GLError t;
+            if (GL.CheckError(out t))
+                throw new Exception("Error Occured: " + t.ToString());
+        }
+
+        public void Bind()
+        {
+            GLFunc.glBindFramebuffer(GLEnum.GL_FRAMEBUFFER, rbo);
+
+        }
+
+        public void ReadPixel(int X, int Y, int targetFBAttachment)
+        {
+            GLFunc.glBindFramebuffer(GLEnum.GL_FRAMEBUFFER, rbo);
+            GLFunc.glBindTexture(GLEnum.GL_TEXTURE_2D_MULTISAMPLE, linked[targetFBAttachment].bufferID);
+
+            double val = 0;
+            GLFunc.glReadPixels(X, Y, 1, 1, linked[targetFBAttachment].format, linked[targetFBAttachment].type, &val);
+
+            byte* bptr = (byte*)&val;
+            for (int i = 0; i < 8; i++)
+                Console.WriteLine(bptr[i]);
+
+            GLFunc.glBindFramebuffer(GLEnum.GL_FRAMEBUFFER, 0);
+
+        }
+
+        public GLRenderBuffer(uint width, uint height, params RBO[] types)
+        {
+            uint _rbo;
+            uint _dep;
+
+            linked = types; 
+
+            if (CreateRenderBuffer(&_rbo, &_dep, types, (int)width, (int)height) == -1)
+                throw new Exception("Failed To Create Framebuffer: Framebuffer not complete!");
+
+            rbo = _rbo;
+            dep = _dep;
+
+            _width = (int)width;
+            _height = (int)height;
+
+            GLError t;
+            if (GL.CheckError(out t))
+                throw new Exception("Error Occured: " + t.ToString());
+        }
+
+        static int CreateRenderBuffer(uint* rbo, uint* dep, RBO[] types, int SCR_WIDTH, int SCR_HEIGHT)
+        {
+            const uint GL_FRAMEBUFFER = 0x8D40;
+            const uint GL_COLOR_ATTACHMENT0 = 0x8CE0;
+
+            GLFunc.glGenFramebuffers(1, rbo);
+            GLFunc.glBindFramebuffer(GL_FRAMEBUFFER, *rbo);
+
+            uint[] attachments = new uint[types.Length];
+
+            for (int i = 0; i < types.Length; i++)
+            {
+                uint val;
+                
+                GLFunc.glGenTextures(1, &val);
+              //  GLFunc.glBindTexture(GL_TEXTURE_2D, val);
+                //GLFunc.glTexImage2D(GL_TEXTURE_2D, 0, types[i].internalFormat, SCR_WIDTH, SCR_HEIGHT, 0, types[i].format, types[i].type, (void*)0);
+                //GLFunc.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                //GLFunc.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+              //  GLFunc.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + (uint)i, GL_TEXTURE_2D, val, 0);
+
+                GLFunc.glBindTexture(GLEnum.GL_TEXTURE_2D_MULTISAMPLE, val);
+                GLFunc.glTexImage2DMultisample(GLEnum.GL_TEXTURE_2D_MULTISAMPLE, 16, GLEnum.GL_RGB, SCR_WIDTH, SCR_HEIGHT, 1);
+                GLFunc.glBindTexture(GLEnum.GL_TEXTURE_2D_MULTISAMPLE, 0);
+                GLFunc.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GLEnum.GL_TEXTURE_2D_MULTISAMPLE, val, 0);
+
+                attachments[i] = GL_COLOR_ATTACHMENT0 + (uint)i;
+                types[i].bufferID = val;
+            }
+
+            fixed (uint* uiptr = attachments)
+                GLFunc.glDrawBuffers(types.Length, uiptr);
+
+            //depth now
+            //GLFunc.glGenRenderbuffers(1, dep);
+            //GLFunc.glBindRenderbuffer(GLEnum.GL_RENDERBUFFER, *dep);
+            //GLFunc.glRenderbufferStorage(GLEnum.GL_RENDERBUFFER, GLEnum.GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
+            //GLFunc.glFramebufferRenderbuffer(GLEnum.GL_FRAMEBUFFER, GLEnum.GL_DEPTH_ATTACHMENT, GLEnum.GL_RENDERBUFFER, *dep);
+            
+            GLFunc.glGenRenderbuffers(1, rbo);
+            GLFunc.glBindRenderbuffer(GLEnum.GL_RENDERBUFFER, *rbo);
+            GLFunc.glRenderbufferStorageMultisample(GLEnum.GL_RENDERBUFFER, 16, GLEnum.GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
+            GLFunc.glBindRenderbuffer(GLEnum.GL_RENDERBUFFER, 0);
+            GLFunc.glFramebufferRenderbuffer(GLEnum.GL_FRAMEBUFFER, GLEnum.GL_DEPTH_ATTACHMENT, GLEnum.GL_RENDERBUFFER, *rbo);
+
+
+            if (GLFunc.glCheckFramebufferStatus(GLEnum.GL_FRAMEBUFFER) != GLEnum.GL_FRAMEBUFFER_COMPLETE)
+                return -1;
+
+            //bind default
+            GLFunc.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+            return 1;
+        }
+
+        public void BlitIntoDefault()
+        {
+            GLFunc.glBindFramebuffer(GLEnum.GL_READ_FRAMEBUFFER, rbo);
+            GLFunc.glBindFramebuffer(GLEnum.GL_DRAW_FRAMEBUFFER, 0);
+
+            GLFunc.glBlitFramebuffer(0, 0, _width, _height, 0, 0, _width, _height, GLEnum.GL_COLOR_BUFFER_BIT |  GLEnum.GL_DEPTH_BUFFER_BIT, GLEnum.GL_NEAREST);
+            GLFunc.glBindFramebuffer(GLEnum.GL_FRAMEBUFFER, 0);
+        }
+
+        public void Resize(int newWidth, int newHeight)
+        {
+            throw new NotImplementedException("Not supported. Please Call DeleteBuffer() and re-create the object.");
+
+            if (newWidth <= 0 || newHeight <= 0)
+                throw new Exception("Invalid Framebuffer Size!");
+
+            GLFunc.glBindFramebuffer(GLEnum.GL_FRAMEBUFFER, rbo);
+
+            for (int i = 0; i < linked.Length; i++)
+            {
+                GLFunc.glBindTexture(GLEnum.GL_TEXTURE_2D_MULTISAMPLE, linked[i].bufferID);
+                GLFunc.glTexImage2DMultisample(GLEnum.GL_TEXTURE_2D_MULTISAMPLE, 16, GLEnum.GL_RGB, newWidth, newHeight, 1);
+            }
+
+         //   GLFunc.glDeleteTextures(1, )
+
+            GLFunc.glBindRenderbuffer(GLEnum.GL_RENDERBUFFER, rbo);
+            GLFunc.glRenderbufferStorageMultisample(GLEnum.GL_RENDERBUFFER, 16, GLEnum.GL_DEPTH_COMPONENT, newWidth, newHeight);
+            GLFunc.glBindFramebuffer(GLEnum.GL_FRAMEBUFFER, 0);
+        }
+    }
+
+    public struct RBO
+    {
+        public int internalFormat;
+        public uint format;
+        public uint type;
+
+        internal uint bufferID;
+
+        public RBO(GL_Enum internalFormat, GL_Enum format, GL_Enum type)
+        {
+            this.internalFormat = (int)internalFormat;
+            this.format = (uint)format;
+            this.type = (uint)type;
+            bufferID = 0;
         }
     }
 

@@ -49,7 +49,7 @@ namespace glcore.gl
         public static extern void glClear(uint val);
 
         [DllImport("opengl32.dll")]
-        public static extern void glEnable(int val);
+        public static extern void glEnable(uint val);
 
         [DllImport("opengl32.dll")]
         public static extern uint glGetError();
@@ -69,6 +69,8 @@ namespace glcore.gl
         [DllImport("opengl32.dll")]
         public static extern void glLineWidth(float width);
 
+        [DllImport("opengl32.dll")]
+        public static extern void glReadPixels(int x, int y, int width, int height, uint format, uint type, void* data);
 
 
         //WARNING THERE MIGHT BE A TYPE MISMATCH WITH UNSIGNED CHAR (byte) AND SIGNED CHAR (sbyte)
@@ -208,6 +210,21 @@ namespace glcore.gl
 
         public delegate void GLUniform4fv(int location, int count, float* value);
         public static GLUniform4fv glUniform4fv;
+
+        public delegate void GLDrawBuffers(int n, uint* bufs);
+        public static GLDrawBuffers glDrawBuffers;
+
+        public delegate void GLTexImage2DMultisample(uint target, int samples, uint internalformat, int width, int height, byte fixedsamplelocations);
+        public static GLTexImage2DMultisample glTexImage2DMultisample;
+
+        public delegate void GLRenderbufferStorageMultisample(uint target, int samples, uint internalformat, int width, int height);
+        public static GLRenderbufferStorageMultisample glRenderbufferStorageMultisample;
+
+        public delegate void GLDeleteRenderbuffers(int n, uint* renderbuffers);
+        public static GLDeleteRenderbuffers glDeleteRenderbuffers;
+
+        public delegate void GLDeleteFramebuffers(int n, uint* framebuffers);
+        public static GLDeleteFramebuffers glDeleteFramebuffers;
 
         public static void LoadFunctions()
         {
@@ -550,6 +567,43 @@ namespace glcore.gl
                 throw new Exception("Failed To Load glUniform4fv!");
 
             glUniform4fv = (GLUniform4fv)Marshal.GetDelegateForFunctionPointer(glUniform4fvPtr, typeof(GLUniform4fv));
+
+            //Load glDrawBuffers
+            IntPtr glDrawBuffersPtr;
+            if ((glDrawBuffersPtr = wglGetProcAddress("glDrawBuffers")) == IntPtr.Zero)
+                throw new Exception("Failed To Load glDrawBuffers!");
+
+            glDrawBuffers = (GLDrawBuffers)Marshal.GetDelegateForFunctionPointer(glDrawBuffersPtr, typeof(GLDrawBuffers));
+
+            //Load glTexImage2DMultisample
+            IntPtr glTexImage2DMultisamplePtr;
+            if ((glTexImage2DMultisamplePtr = wglGetProcAddress("glTexImage2DMultisample")) == IntPtr.Zero)
+                throw new Exception("Failed To Load glTexImage2DMultisample!");
+
+            glTexImage2DMultisample = (GLTexImage2DMultisample)Marshal.GetDelegateForFunctionPointer(glTexImage2DMultisamplePtr, typeof(GLTexImage2DMultisample));
+
+            //Load glRenderbufferStorageMultisample
+            IntPtr glRenderbufferStorageMultisamplePtr;
+            if ((glRenderbufferStorageMultisamplePtr = wglGetProcAddress("glRenderbufferStorageMultisample")) == IntPtr.Zero)
+                throw new Exception("Failed To Load glRenderbufferStorageMultisample!");
+
+            glRenderbufferStorageMultisample = (GLRenderbufferStorageMultisample)Marshal.GetDelegateForFunctionPointer(glRenderbufferStorageMultisamplePtr, 
+                typeof(GLRenderbufferStorageMultisample));
+
+            //Load glDeleteRenderbuffers
+            IntPtr glDeleteRenderbuffersPtr;
+            if ((glDeleteRenderbuffersPtr = wglGetProcAddress("glDeleteRenderbuffers")) == IntPtr.Zero)
+                throw new Exception("Failed To Load glDeleteRenderbuffers!");
+
+            glDeleteRenderbuffers = (GLDeleteRenderbuffers)Marshal.GetDelegateForFunctionPointer(glDeleteRenderbuffersPtr, typeof(GLDeleteRenderbuffers));
+
+            //Load glDeleteFramebuffers
+            IntPtr glDeleteFramebuffersPtr;
+            if ((glDeleteFramebuffersPtr = wglGetProcAddress("glDeleteFramebuffers")) == IntPtr.Zero)
+                throw new Exception("Failed To Load glDeleteFramebuffers!");
+
+            glDeleteFramebuffers = (GLDeleteFramebuffers)Marshal.GetDelegateForFunctionPointer(glDeleteFramebuffersPtr, typeof(GLDeleteFramebuffers));
+
         }
     }
 

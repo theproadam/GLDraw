@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using glcore.gl;
 using glcore.Types;
+using glcore.Enums;
 
 namespace glcore
 {
@@ -40,19 +41,9 @@ namespace glcore
         {
             GLFunc.glUseProgram(shader.shaderProgram);
 
+            if (false)
             if (shader.linkedTextures.Count != 0 || shader.linkedFramebuffers.Count != 0 || shader.linkedCubemaps.Count != 0)
             {
-                //uint[] iDs = new uint[shader.linkedTextures.Count + shader.linkedFramebuffers.Count + shader.linkedCubemaps.Count];
-                //for (int i = 0; i < shader.linkedTextures.Count; i++)
-                //    iDs[i] = shader.linkedTextures[i].textureID;
-
-                //for (int i = shader.linkedTextures.Count; i < shader.linkedTextures.Count + shader.linkedFramebuffers.Count; i++)
-                //    iDs[i] = shader.linkedFramebuffers[i].tex;
-
-                //for (int i = shader.linkedTextures.Count + shader.linkedFramebuffers.Count;
-                //    i < shader.linkedTextures.Count + shader.linkedFramebuffers.Count + shader.linkedCubemaps.Count; i++)
-                //    iDs[i] = shader.linkedCubemaps[i].textureID;
-
                 uint o = 0;
 
                 const uint GL_TEXTURE0 = 0x84C0;
@@ -76,7 +67,7 @@ namespace glcore
                     GLFunc.glActiveTexture(GL_TEXTURE0 + (uint)i + o++); //glActiveTexture(GL_TEXTURE0);
                     GLFunc.glBindTexture(GL_TEXTURE_CUBEMAP, shader.linkedCubemaps[i].textureID);
                 }
-
+                
                 //for (int i = 0; i < iDs.Length; i++)
                 //{
                 //     GLFunc.glActiveTexture(GL_TEXTURE0 + (uint)i); //glActiveTexture(GL_TEXTURE0);
@@ -84,6 +75,21 @@ namespace glcore
                 //}
 
             }
+
+            uint o1 = 0;
+
+            for (int i = 0; i < shader.linkedRBO.Count; i++)
+            {
+                for (int j = 0; j < shader.linkedRBO[i].linked.Length; j++)
+                {
+                    GLFunc.glActiveTexture(GLEnum.GL_TEXTURE0 + o1++);
+                    GLFunc.glBindTexture(GLEnum.GL_TEXTURE_2D, shader.linkedRBO[i].linked[j].bufferID);
+
+
+                }
+
+            }
+
 
             const uint GL_TRIANGLES = 0x0004;
 
@@ -93,6 +99,7 @@ namespace glcore
           //  Draw(shader.shaderProgram, 0, (uint)((buffer._size / 4) / buffer.stride), buffer.VAO);
 
         }
+
 
         public unsafe static void Line3D(Vector3 from, Vector3 to, Vector4 color4f)
         { 
@@ -197,11 +204,57 @@ namespace glcore
           
         }
 
-        public void Bind()
+        public unsafe BlitData(object target)
         {
-          // GL.ChangeCurrentFrameBuffer(0);
-          //  GL.ChangeFrameBufferTexture(0);
+            IntPtr handle;
+            if (target.GetType() == typeof(IntPtr))
+                handle = (IntPtr)target;
+            else if (target.GetType().BaseType == typeof(Control))
+                handle = ((Control)target).Handle;
+            else if (target.GetType().BaseType == typeof(Form))
+                handle = ((Form)target).Handle;
+            else throw new Exception("Target must be a Control/Form or a Handle!");
+
+            LinkedHandle = handle;
+            TargetDC = GLFunc.GetDC(handle);
+
+            PixelFormatDescriptor pfd = new PixelFormatDescriptor()
+            {
+                Size = (ushort)sizeof(PixelFormatDescriptor),
+                Version = 1,
+                Flags = 0x00000004 | 0x00000020 | 0x00000001, //PFD WINDOW, OPENGL, DBUFFER
+                PixelType = 0, //RGBA
+                ColorBits = 32,
+                DepthBits = 24, //32bit depth
+                LayerType = 0 //PFD_MAIN_PLANE
+            };
+
+            int iPixelFormat;
+
+            if ((iPixelFormat = GLFunc.ChoosePixelFormat(TargetDC, ref pfd)) == 0)
+            {
+                throw new Exception("ChoosePixelFormat Failed");
+            }
+
+            // make that match the device context's current pixel format 
+            if (GLFunc.SetPixelFormat(TargetDC, iPixelFormat, ref pfd) == 0)
+            {
+                throw new Exception("SetPixelFormat Failed");
+            }
+
+            if ((m_hglrc = GLFunc.wglCreateContext(TargetDC)) == IntPtr.Zero)
+            {
+                throw new Exception("wglCreateContext Failed");
+            }
+
+            if ((GLFunc.wglMakeCurrent(TargetDC, m_hglrc)) == IntPtr.Zero)
+            {
+                throw new Exception("wglMakeCurrent Failed");
+            }
+
+
         }
+
 
         public void MakeCurrent()
         {
@@ -253,6 +306,7 @@ namespace glcore
 
 
             int GL_TRUE = 1;
+            int GL_FALSE = 0;
 
             int[] piAttribIList = new int[] { 
                 (int)WGL_ARB.WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
@@ -270,6 +324,18 @@ namespace glcore
                 (int)WGL_ARB.WGL_SAMPLES_ARB, 16,
                 0, 0 };
 
+            //int[] piAttribIList = new int[]
+            //{
+            //    (int)WGL_ARB.WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
+            //    (int)WGL_ARB.WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
+            //    (int)WGL_ARB.WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
+            //    (int)WGL_ARB.WGL_PIXEL_TYPE_ARB, (int)WGL_ARB.WGL_TYPE_RGBA_ARB,
+            //    (int)WGL_ARB.WGL_COLOR_BITS_ARB, 32,
+            //    (int)WGL_ARB.WGL_DEPTH_BITS_ARB, 24,
+            //    (int)WGL_ARB.WGL_STENCIL_BITS_ARB, 8,
+            //    0, // End
+            //};
+
             float[] fList = new float[2];
 
             int pixelFormat;
@@ -282,7 +348,7 @@ namespace glcore
                 fixed (float* fptr = fList)
                 {
                     //result = wglSetPixelFormat((void*)TargetDC, iptr, fptr, 1, &pixelFormat, &nNumFormats);
-                    result = GLFunc.wglChoosePixelFormatARB((void*)TargetDC, iptr, fptr, 1, &pixelFormat, &nNumFormats);
+                    result = GLFunc.wglChoosePixelFormatARB((void*)TargetDC, iptr, (float*)0, 1, &pixelFormat, &nNumFormats);
                 }
             }
 
@@ -321,6 +387,11 @@ namespace glcore
            // GL.glEnable(0x0B71);
            // GL.glEnable(0x809D);
 
+        }
+
+        public void Bind()
+        {
+            GLFunc.glBindFramebuffer(GLEnum.GL_FRAMEBUFFER, 0);
         }
 
         public enum WGL_ARB
