@@ -25,10 +25,8 @@ namespace glcore
             //load ogl functions
             GLFunc.LoadFunctions();
 
-            //
-
-            const int GL_DEPTH_TEST = 0x0B71;
-            GLFunc.glEnable(GL_DEPTH_TEST);
+            
+            GLFunc.glEnable(GLEnum.GL_DEPTH_TEST);
         }
 
         public static void Clear(float r, float b, float g, float a)
@@ -37,46 +35,27 @@ namespace glcore
             GLFunc.glClear((uint)GLClear.GL_COLOR_BUFFER_BIT | (uint)GLClear.GL_DEPTH_BUFFER_BIT);
         }
 
+        public static void ClearDepth()
+        {
+            GLFunc.glClear((uint)GLClear.GL_DEPTH_BUFFER_BIT);
+        }
+
         public unsafe static void Draw(GLBuffer buffer, Shader shader)
         {
             GLFunc.glUseProgram(shader.shaderProgram);
 
-            if (false)
-            if (shader.linkedTextures.Count != 0 || shader.linkedFramebuffers.Count != 0 || shader.linkedCubemaps.Count != 0)
+            uint o = 0;
+            for (int i = 0; i < shader.linkedTextures.Count; i++)
             {
-                uint o = 0;
-
-                const uint GL_TEXTURE0 = 0x84C0;
-                const uint GL_TEXTURE_2D = 0x0DE1;
-                const uint GL_TEXTURE_CUBEMAP = 0x8513;
-
-                for (int i = 0; i < shader.linkedTextures.Count; i++)
-                {
-                    GLFunc.glActiveTexture(GL_TEXTURE0 + (uint)i + o++); //glActiveTexture(GL_TEXTURE0);
-                    GLFunc.glBindTexture(GL_TEXTURE_2D, shader.linkedTextures[i].textureID);
-                }
-
-                for (int i = 0; i < shader.linkedFramebuffers.Count; i++)
-                {
-                    GLFunc.glActiveTexture(GL_TEXTURE0 + (uint)i + o++); //glActiveTexture(GL_TEXTURE0);
-                    GLFunc.glBindTexture(GL_TEXTURE_2D, shader.linkedFramebuffers[i].tex);
-                }
-
-                for (int i = 0; i < shader.linkedCubemaps.Count; i++)
-                {
-                    GLFunc.glActiveTexture(GL_TEXTURE0 + (uint)i + o++); //glActiveTexture(GL_TEXTURE0);
-                    GLFunc.glBindTexture(GL_TEXTURE_CUBEMAP, shader.linkedCubemaps[i].textureID);
-                }
+                GLFunc.glActiveTexture(GLEnum.GL_TEXTURE0 + (uint)i); //glActiveTexture(GL_TEXTURE0);
+                GLFunc.glBindTexture(shader.linkedTextures[i].texture.GetMode(), shader.linkedTextures[i].texture.GetID());
                 
-                //for (int i = 0; i < iDs.Length; i++)
-                //{
-                //     GLFunc.glActiveTexture(GL_TEXTURE0 + (uint)i); //glActiveTexture(GL_TEXTURE0);
-                //     GLFunc.glBindTexture(GL_TEXTURE_CUBEMAP, iDs[i]);
-                //}
 
+                o++;
             }
 
-            uint o1 = 0;
+          //  uint o1 = 0;
+            uint o1 = o;
 
             for (int i = 0; i < shader.linkedRBO.Count; i++)
             {
@@ -84,15 +63,10 @@ namespace glcore
                 {
                     GLFunc.glActiveTexture(GLEnum.GL_TEXTURE0 + o1++);
                     GLFunc.glBindTexture(GLEnum.GL_TEXTURE_2D, shader.linkedRBO[i].linked[j].bufferID);
-
-
                 }
-
             }
 
-
             const uint GL_TRIANGLES = 0x0004;
-
             
             GLFunc.glBindVertexArray(buffer.VAO);
             GLFunc.glDrawArrays(GL_TRIANGLES, 0, (int)((buffer._size / 4) / buffer.stride));
@@ -100,11 +74,6 @@ namespace glcore
 
         }
 
-
-        public unsafe static void Line3D(Vector3 from, Vector3 to, Vector4 color4f)
-        { 
-            
-        }
 
         public static void Blit(BlitData bData)
         {

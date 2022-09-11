@@ -52,6 +52,9 @@ namespace glcore.gl
         public static extern void glEnable(uint val);
 
         [DllImport("opengl32.dll")]
+        public static extern void glDisable(uint val);
+
+        [DllImport("opengl32.dll")]
         public static extern uint glGetError();
 
         [DllImport("opengl32.dll")]
@@ -64,6 +67,9 @@ namespace glcore.gl
         public static extern void glTexImage2D(uint target, int level, int internalformat, int width, int height, int border, uint format, uint type, void* data);
 
         [DllImport("opengl32.dll")]
+        public static extern void glTexImage1D(uint target, int level, int internalformat, int width, int border, uint format, uint type, void* data);
+
+        [DllImport("opengl32.dll")]
         public static extern void glTexParameteri(uint target, uint pname, int param);
 
         [DllImport("opengl32.dll")]
@@ -72,6 +78,23 @@ namespace glcore.gl
         [DllImport("opengl32.dll")]
         public static extern void glReadPixels(int x, int y, int width, int height, uint format, uint type, void* data);
 
+        [DllImport("opengl32.dll")]
+        public static extern void glBlendFunc(uint sFactor, uint dFactor);
+
+        [DllImport("opengl32.dll")]
+        public static extern void glPolygonOffset(float factor, float units);
+       
+        [DllImport("opengl32.dll")]
+        public static extern void glCullFace(uint mode);
+
+        [DllImport("opengl32.dll")]
+        public static extern void glTexSubImage1D(uint target, int level, int xoffset, int width, uint format, uint type, void* pixels);
+
+        [DllImport("opengl32.dll")]
+        public static extern void glGetTexImage(uint target, int level, uint format, uint type, void* pixels);
+
+        [DllImport("opengl32.dll")]
+        public static extern void glGetTexLevelParameteriv(uint target, int level, uint pname, int* _params);
 
         //WARNING THERE MIGHT BE A TYPE MISMATCH WITH UNSIGNED CHAR (byte) AND SIGNED CHAR (sbyte)
 
@@ -225,6 +248,18 @@ namespace glcore.gl
 
         public delegate void GLDeleteFramebuffers(int n, uint* framebuffers);
         public static GLDeleteFramebuffers glDeleteFramebuffers;
+
+        public delegate void GLUniform1f(int location, float v0);
+        public static GLUniform1f glUniform1f;
+
+        public delegate void GLTexBuffer(uint target, uint internalformat, uint buffer);
+        public static GLTexBuffer glTexBuffer;
+
+        public delegate void GLTexBufferRange(uint target, uint internalformat, uint buffer, IntPtr offset, IntPtr size);
+        public static GLTexBufferRange glTexBufferRange;
+
+        public delegate void GLBufferSubData(uint target, IntPtr offset, IntPtr size, void* data);
+        public static GLBufferSubData glBufferSubData;
 
         public static void LoadFunctions()
         {
@@ -604,6 +639,33 @@ namespace glcore.gl
 
             glDeleteFramebuffers = (GLDeleteFramebuffers)Marshal.GetDelegateForFunctionPointer(glDeleteFramebuffersPtr, typeof(GLDeleteFramebuffers));
 
+            //Load glUniform1f
+            IntPtr glUniform1fPtr;
+            if ((glUniform1fPtr = wglGetProcAddress("glUniform1f")) == IntPtr.Zero)
+                throw new Exception("Failed To Load glUniform1f!");
+
+            glUniform1f = (GLUniform1f)Marshal.GetDelegateForFunctionPointer(glUniform1fPtr, typeof(GLUniform1f));
+                
+            //Load glTexBuffer
+            IntPtr glTexBufferPtr;
+            if ((glTexBufferPtr = wglGetProcAddress("glTexBuffer")) == IntPtr.Zero)
+                throw new Exception("Failed To Load glTexBuffer!");
+
+            glTexBuffer = (GLTexBuffer)Marshal.GetDelegateForFunctionPointer(glTexBufferPtr, typeof(GLTexBuffer));
+
+            //Load glTexBufferRange
+            IntPtr glTexBufferRangePtr;
+            if ((glTexBufferRangePtr = wglGetProcAddress("glTexBufferRange")) == IntPtr.Zero)
+                throw new Exception("Failed To Load glTexBufferRange!");
+
+            glTexBufferRange = (GLTexBufferRange)Marshal.GetDelegateForFunctionPointer(glTexBufferRangePtr, typeof(GLTexBufferRange));
+
+            //Load glBufferSubData
+            IntPtr glBufferSubDataPtr;
+            if ((glBufferSubDataPtr = wglGetProcAddress("glBufferSubData")) == IntPtr.Zero)
+                throw new Exception("Failed To Load glBufferSubData!");
+
+            glBufferSubData = (GLBufferSubData)Marshal.GetDelegateForFunctionPointer(glBufferSubDataPtr, typeof(GLBufferSubData));
         }
     }
 

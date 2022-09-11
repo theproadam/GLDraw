@@ -13,7 +13,7 @@ namespace glcore
 {
     public unsafe class GLBuffer : IDisposable
     {
-       internal int _size;
+        internal int _size;
 
         public int Size { get { return _size; } }
         public int Stride { get { return stride; } }
@@ -185,15 +185,13 @@ namespace glcore
         }
     }
 
-    public unsafe class GLTexture : IDisposable
+    public unsafe class GLTexture : IDisposable, ITexture
     {
         private int _width;
         private int _height;
-        private int _stride;
 
         public int Width { get { return _width; } }
         public int Height { get { return _height; } }
-        public int Stride { get { return _stride; } }
 
         internal bool disposed = false;
         internal uint textureID;
@@ -253,6 +251,7 @@ namespace glcore
             }
 
             textureID = tID;
+            ComputeWH();
 
             GLError t;
             if (GL.CheckError(out t))
@@ -280,6 +279,8 @@ namespace glcore
 
             GLFunc.glTexImage2D(GL_TEXTURE_2D, 0, stride == 4 ? 0x1908 : 0x1907, width, height, 0, stride == 4 ? (uint)0x1908 : (uint)0x1907, 0x1401, data);
             GLFunc.glGenerateMipmap(GL_TEXTURE_2D);
+
+
         }
 
         public GLTexture(Bitmap sourceBitmap, bool flipBlueAndRed = true)
@@ -318,6 +319,7 @@ namespace glcore
 
             CreateTexture(&tID, bmpWidth, bmpHeight, sD, (void*)bmpData.Scan0);
             textureID = tID;
+            ComputeWH();
 
             bitmap.UnlockBits(bmpData);
 
@@ -325,23 +327,36 @@ namespace glcore
             if (GL.CheckError(out t))
                 throw new Exception("Error Occured: " + t.ToString());
         }
+
+        void ComputeWH()
+        {
+            int w, h;
+            GLFunc.glGetTexLevelParameteriv(GLEnum.GL_TEXTURE_2D, 0, GLEnum.GL_TEXTURE_WIDTH, &w);
+            GLFunc.glGetTexLevelParameteriv(GLEnum.GL_TEXTURE_2D, 0, GLEnum.GL_TEXTURE_HEIGHT, &h);
+
+            _width = w;
+            _height = h;
+        }
+
+        public uint GetID()
+        {
+            return textureID;
+        }
+
+        public uint GetMode()
+        {
+            return GLEnum.GL_TEXTURE_2D;
+        }
     }
 
-    public unsafe class GLFramebuffer : IDisposable
+    public unsafe class GLTexture1D : IDisposable, ITexture
     {
-        private int _width;
-        private int _height;
-        private int _stride;
-
-        public int Width { get { return _width; } }
-        public int Height { get { return _height; } }
-        public int Stride { get { return _stride; } }
-
         internal bool disposed = false;
+        internal uint textureID;
+        internal TexSpec pixelSpec;
 
-        internal uint fbo;
-        internal uint rbo;
-        internal uint tex;
+        internal int _width;
+        public int Size { get { return _width ;} }
 
         public void Dispose()
         {
@@ -349,7 +364,7 @@ namespace glcore
             GC.SuppressFinalize(this);
         }
 
-        ~GLFramebuffer()
+        ~GLTexture1D()
         {
             Dispose(false);
         }
@@ -358,96 +373,154 @@ namespace glcore
         {
             if (!disposed)
             {
-                // DeleteTexture(textureID);
+
                 disposed = true;
             }
         }
 
-        public GLFramebuffer(uint width, uint height)
+        public void DeleteTexture()
         {
-            uint _fbo;
-            uint _rbo;
-            uint _tex;
+            uint tex = textureID;
+            GLFunc.glDeleteTextures(1, &tex);
+        }
 
-            if (CreateFrameBuffer(&_rbo, &_fbo, &_tex, width, height) == -1)
-                throw new Exception("Failed To Create Framebuffer: Framebuffer not complete!");
+        public GLTexture1D(int size, TexSpec stride)
+        {
+            uint tID;
+            GLFunc.glGenTextures(1, &tID);
+            GLFunc.glBindTexture(GLEnum.GL_TEXTURE_1D, tID);
 
-            fbo = _fbo;
-            rbo = _rbo;
-            tex = _tex;
+            GLFunc.glTexParameteri(GLEnum.GL_TEXTURE_1D, GLEnum.GL_TEXTURE_MIN_FILTER, (int)GLEnum.GL_NEAREST);
+            GLFunc.glTexParameteri(GLEnum.GL_TEXTURE_1D, GLEnum.GL_TEXTURE_MAG_FILTER, (int)GLEnum.GL_NEAREST);
 
-            _width = (int)width;
-            _height = (int)height;
+            GLFunc.glTexImage1D(GLEnum.GL_TEXTURE_1D, 0, stride.internalFormat, size, 0, stride.format, stride.type, (void*)0);
+
+            textureID = tID;
+
+          
+            pixelSpec = stride;
+
+            int w;
+            GLFunc.glGetTexLevelParameteriv(GLEnum.GL_TEXTURE_1D, 0, GLEnum.GL_TEXTURE_WIDTH, &w);
+            _width = w;
+
+            GLFunc.glBindTexture(GLEnum.GL_TEXTURE_1D, 0); //unbind
 
             GLError t;
             if (GL.CheckError(out t))
                 throw new Exception("Error Occured: " + t.ToString());
+
+
         }
 
-        public void Bind()
+        public GLTexture1D(int[] data, TexSpec stride)
         {
-            //GL.ChangeFrameBufferTexture(tex);
-            //GL.ChangeCurrentFrameBuffer(fbo);
-        }
+            int size = data.Length;
+            const uint GL_MAX_TEXTURE_SIZE = 0x0D33;
 
-        public void CopyInto(GLFramebuffer dest)
-        {
-            if (_width != dest._width)
-                throw new Exception("Widths are not the same!");
+            if (data.Length >= GL_MAX_TEXTURE_SIZE)
+                throw new Exception("Data Size Too Big!");
 
-            if (_height != dest._height)
-                throw new Exception("Heights are not the same!");
+            uint tID;
+            GLFunc.glGenTextures(1, &tID);
+            GLFunc.glBindTexture(GLEnum.GL_TEXTURE_1D, tID);
 
-           // CopyFrameBuffer(fbo, dest.fbo, tex, dest.tex, _width, _height);
-        }
+            GLFunc.glTexParameteri(GLEnum.GL_TEXTURE_1D, GLEnum.GL_TEXTURE_MIN_FILTER, (int)GLEnum.GL_NEAREST);
+            GLFunc.glTexParameteri(GLEnum.GL_TEXTURE_1D, GLEnum.GL_TEXTURE_MAG_FILTER, (int)GLEnum.GL_NEAREST);
 
-        public void CopyInto(BlitData defaultFramebuffer)
-        {
-            defaultFramebuffer.MakeCurrent();
-           //CopyFrameBuffer(fbo, 0, tex, 0, _width, _height);
-        }
-
-        static int CreateFrameBuffer(uint* rbo, uint* framebuffer, uint* texColBuf, uint width, uint height)
-        {
-            const uint GL_FRAMEBUFFER = 0x8D40;
-            const uint GL_RENDERBUFFER = 0x8D41;
-            const uint GL_DEPTH24_STENCIL8 = 0x88F0;
-            const uint GL_DEPTH_STENCIL_ATTACHMENT = 0x821A;
-            const uint GL_FRAMEBUFFER_COMPLETE = 0x8CD5;
-            const uint GL_COLOR_ATTACHMENT0 = 0x8CE0;
-
-            const uint GL_NEAREST = 0x2600;
-            const uint GL_LINEAR = 0x2601;
-
-            GLFunc.glGenFramebuffers(1, framebuffer);
-            GLFunc.glBindFramebuffer(GL_FRAMEBUFFER, *framebuffer);
+            if (GL.CheckError() != GLError.GL_NO_ERROR)
+                throw new Exception();
 
 
-            //GLFunc.glGenTextures(1, texColBuf);
-            //GLFunc.glBindTexture(GL_TEXTURE_2D, *texColBuf);
-            //GLFunc.glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-            //GLFunc.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            //GLFunc.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-            //GLFunc.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *texColBuf, 0);
-
-
-            GLFunc.glGenRenderbuffers(1, rbo);
-            GLFunc.glBindRenderbuffer(GL_RENDERBUFFER, *rbo);
-            GLFunc.glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, (int)width, (int)height);
-            GLFunc.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, *rbo);
-
-
-            // now that we actually created the framebuffer and added all attachments we want to check if it is actually complete now
-            if (GLFunc.glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+            fixed (int* iptr = data)
             {
-                return -1;
+                GLFunc.glTexImage1D(GLEnum.GL_TEXTURE_1D, 0, stride.internalFormat, size, 0, stride.format, stride.type, (void*)iptr);
             }
 
-            //switch back to default framebuffer!
-            GLFunc.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+           
 
-            return 0;
+            if (GL.CheckError() != GLError.GL_NO_ERROR)
+                throw new Exception();
+
+            textureID = tID;
+            pixelSpec = stride;
+
+            int w;
+            GLFunc.glGetTexLevelParameteriv(GLEnum.GL_TEXTURE_1D, 0, GLEnum.GL_TEXTURE_WIDTH, &w);
+            _width = w;
+
+            GLFunc.glBindTexture(GLEnum.GL_TEXTURE_1D, 0); //unbind
+
+            GLError t;
+            if (GL.CheckError(out t))
+                throw new Exception("Error Occured: " + t.ToString());
+
+           
+        }
+
+        public void SetPixel(int pos, object value)
+        {
+            GCHandle handle = GCHandle.Alloc(value, GCHandleType.Pinned);
+
+            GLFunc.glBindTexture(GLEnum.GL_TEXTURE_1D, textureID);
+            GLError ea = GL.CheckError();
+
+            GLFunc.glTexSubImage1D(GLEnum.GL_TEXTURE_1D, 0, pos, 1, pixelSpec.format, pixelSpec.type, (void*)handle.AddrOfPinnedObject());
+
+            GLError ea1 = GL.CheckError();
+
+            GLFunc.glBindTexture(GLEnum.GL_TEXTURE_1D, 0); //unbind
+
+            handle.Free();
+        }
+
+        public int[] tempPixel(int sz)
+        {
+            int[] asd = new int[sz];
+
+            GLFunc.glBindTexture(GLEnum.GL_TEXTURE_1D, textureID);
+            fixed (int* iptr = asd)
+            {
+                GLFunc.glGetTexImage(GLEnum.GL_TEXTURE_1D, 0, pixelSpec.format, pixelSpec.type, (void*)iptr);
+            }
+
+            GLFunc.glBindFramebuffer(GLEnum.GL_FRAMEBUFFER, 0);
+
+            return asd;
+        }
+
+        public T GetPixel0<T>(int pos, int sz) where T : struct
+        {
+            throw new Exception("debug, not implemented");
+           // T value = default(T);
+           // GCHandle handle = GCHandle.Alloc(value, GCHandleType.Pinned);
+
+
+            GLFunc.glBindTexture(GLEnum.GL_TEXTURE_1D, textureID);
+           // GLFunc.glGetTexImage(GLEnum.GL_TEXTURE_1D, 0, pixelSpec.format, pixelSpec.type, (void*)handle.AddrOfPinnedObject());
+           
+            int[] asd = new int[sz];
+
+            fixed (int* iptr = asd)
+            {
+                GLFunc.glGetTexImage(GLEnum.GL_TEXTURE_1D, 0, pixelSpec.format, pixelSpec.type, (void*)iptr);
+            }
+
+            GLFunc.glBindFramebuffer(GLEnum.GL_FRAMEBUFFER, 0);
+          //  handle.Free();
+
+            return default(T);
+            //return value;
+        }
+
+        public uint GetID()
+        {
+            return textureID;
+        }
+
+        public uint GetMode()
+        {
+            return GLEnum.GL_TEXTURE_1D;
         }
     }
 
@@ -494,7 +567,7 @@ namespace glcore
 
             for (int i = 0; i < linked.Length; i++)
             {
-                GLFunc.glBindTexture(GLEnum.GL_TEXTURE_2D_MULTISAMPLE, linked[i].bufferID);
+                GLFunc.glBindTexture(GLEnum.GL_TEXTURE_2D, linked[i].bufferID);
                 uint val = linked[i].bufferID;
                 GLFunc.glDeleteTextures(1, &val);
             }
@@ -502,8 +575,8 @@ namespace glcore
             GLFunc.glBindRenderbuffer(GLEnum.GL_RENDERBUFFER, rbo);
             uint val0 = rbo;
             GLFunc.glDeleteRenderbuffers(1, &val0);
-
             GLFunc.glDeleteFramebuffers(1, &val0);
+
             GLError t;
             if (GL.CheckError(out t))
                 throw new Exception("Error Occured: " + t.ToString());
@@ -515,20 +588,54 @@ namespace glcore
 
         }
 
-        public void ReadPixel(int X, int Y, int targetFBAttachment)
+        public uint ReadPixel_UINT32(int X, int Y, int targetFBAttachment)
         {
             GLFunc.glBindFramebuffer(GLEnum.GL_FRAMEBUFFER, rbo);
-            GLFunc.glBindTexture(GLEnum.GL_TEXTURE_2D_MULTISAMPLE, linked[targetFBAttachment].bufferID);
+            GLFunc.glBindTexture(GLEnum.GL_TEXTURE_2D, linked[targetFBAttachment].bufferID);
 
-            double val = 0;
+            uint val = 0;
             GLFunc.glReadPixels(X, Y, 1, 1, linked[targetFBAttachment].format, linked[targetFBAttachment].type, &val);
 
-            byte* bptr = (byte*)&val;
-            for (int i = 0; i < 8; i++)
-                Console.WriteLine(bptr[i]);
+            GLFunc.glBindFramebuffer(GLEnum.GL_FRAMEBUFFER, 0);
+            //Console.WriteLine("\n");
+            //byte* bptr = (byte*)&val;
+            //for (int i = 0; i < 4; i++)
+            //    Console.WriteLine(bptr[i]);
+
+            return val;
+        }
+
+        public int ReadPixel_INT32(int X, int Y, int targetFBAttachment)
+        {
+            GLFunc.glBindFramebuffer(GLEnum.GL_FRAMEBUFFER, rbo);
+            GLFunc.glBindTexture(GLEnum.GL_TEXTURE_2D, linked[targetFBAttachment].bufferID);
+
+            int val = 0;
+            GLFunc.glReadPixels(X, Y, 1, 1, linked[targetFBAttachment].format, linked[targetFBAttachment].type, &val);
 
             GLFunc.glBindFramebuffer(GLEnum.GL_FRAMEBUFFER, 0);
+            //Console.WriteLine("\n");
+            //byte* bptr = (byte*)&val;
+            //for (int i = 0; i < 4; i++)
+            //    Console.WriteLine(bptr[i]);
 
+            return val;
+        }
+
+        public T ReadPixel<T>(int X, int Y, int targetFBAttachment) where T : struct
+        {
+            T value = default(T);
+            GCHandle handle = GCHandle.Alloc(value, GCHandleType.Pinned);
+
+            GLFunc.glBindFramebuffer(GLEnum.GL_FRAMEBUFFER, rbo);
+            GLFunc.glBindTexture(GLEnum.GL_TEXTURE_2D, linked[targetFBAttachment].bufferID);
+
+            GLFunc.glReadPixels(X, Y, 1, 1, linked[targetFBAttachment].format, linked[targetFBAttachment].type, (void*)handle.AddrOfPinnedObject());
+
+            GLFunc.glBindFramebuffer(GLEnum.GL_FRAMEBUFFER, 0);
+            handle.Free();
+
+            return value;
         }
 
         public GLRenderBuffer(uint width, uint height, params RBO[] types)
@@ -567,16 +674,16 @@ namespace glcore
                 uint val;
                 
                 GLFunc.glGenTextures(1, &val);
-              //  GLFunc.glBindTexture(GL_TEXTURE_2D, val);
-                //GLFunc.glTexImage2D(GL_TEXTURE_2D, 0, types[i].internalFormat, SCR_WIDTH, SCR_HEIGHT, 0, types[i].format, types[i].type, (void*)0);
-                //GLFunc.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-                //GLFunc.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-              //  GLFunc.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + (uint)i, GL_TEXTURE_2D, val, 0);
+                GLFunc.glBindTexture(GLEnum.GL_TEXTURE_2D, val);
+                GLFunc.glTexImage2D(GLEnum.GL_TEXTURE_2D, 0, types[i].internalFormat, SCR_WIDTH, SCR_HEIGHT, 0, types[i].format, types[i].type, (void*)0);
+               // GLFunc.glTexParameteri(GLEnum.GL_TEXTURE_2D, GLEnum.GL_TEXTURE_MIN_FILTER, (int)GLEnum.GL_NEAREST);
+               // GLFunc.glTexParameteri(GLEnum.GL_TEXTURE_2D, GLEnum.GL_TEXTURE_MAG_FILTER, (int)GLEnum.GL_NEAREST);
+                GLFunc.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + (uint)i, GLEnum.GL_TEXTURE_2D, val, 0);
 
-                GLFunc.glBindTexture(GLEnum.GL_TEXTURE_2D_MULTISAMPLE, val);
-                GLFunc.glTexImage2DMultisample(GLEnum.GL_TEXTURE_2D_MULTISAMPLE, 16, GLEnum.GL_RGB, SCR_WIDTH, SCR_HEIGHT, 1);
-                GLFunc.glBindTexture(GLEnum.GL_TEXTURE_2D_MULTISAMPLE, 0);
-                GLFunc.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GLEnum.GL_TEXTURE_2D_MULTISAMPLE, val, 0);
+                //GLFunc.glBindTexture(GLEnum.GL_TEXTURE_2D_MULTISAMPLE, val);
+                //GLFunc.glTexImage2DMultisample(GLEnum.GL_TEXTURE_2D_MULTISAMPLE, 16, GLEnum.GL_RGB, SCR_WIDTH, SCR_HEIGHT, 1);
+                //GLFunc.glBindTexture(GLEnum.GL_TEXTURE_2D_MULTISAMPLE, 0);
+                //GLFunc.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GLEnum.GL_TEXTURE_2D_MULTISAMPLE, val, 0);
 
                 attachments[i] = GL_COLOR_ATTACHMENT0 + (uint)i;
                 types[i].bufferID = val;
@@ -586,16 +693,16 @@ namespace glcore
                 GLFunc.glDrawBuffers(types.Length, uiptr);
 
             //depth now
-            //GLFunc.glGenRenderbuffers(1, dep);
-            //GLFunc.glBindRenderbuffer(GLEnum.GL_RENDERBUFFER, *dep);
-            //GLFunc.glRenderbufferStorage(GLEnum.GL_RENDERBUFFER, GLEnum.GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
-            //GLFunc.glFramebufferRenderbuffer(GLEnum.GL_FRAMEBUFFER, GLEnum.GL_DEPTH_ATTACHMENT, GLEnum.GL_RENDERBUFFER, *dep);
+            GLFunc.glGenRenderbuffers(1, dep);
+            GLFunc.glBindRenderbuffer(GLEnum.GL_RENDERBUFFER, *dep);
+            GLFunc.glRenderbufferStorage(GLEnum.GL_RENDERBUFFER, GLEnum.GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
+            GLFunc.glFramebufferRenderbuffer(GLEnum.GL_FRAMEBUFFER, GLEnum.GL_DEPTH_ATTACHMENT, GLEnum.GL_RENDERBUFFER, *dep);
             
-            GLFunc.glGenRenderbuffers(1, rbo);
-            GLFunc.glBindRenderbuffer(GLEnum.GL_RENDERBUFFER, *rbo);
-            GLFunc.glRenderbufferStorageMultisample(GLEnum.GL_RENDERBUFFER, 16, GLEnum.GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
-            GLFunc.glBindRenderbuffer(GLEnum.GL_RENDERBUFFER, 0);
-            GLFunc.glFramebufferRenderbuffer(GLEnum.GL_FRAMEBUFFER, GLEnum.GL_DEPTH_ATTACHMENT, GLEnum.GL_RENDERBUFFER, *rbo);
+            //GLFunc.glGenRenderbuffers(1, rbo);
+            //GLFunc.glBindRenderbuffer(GLEnum.GL_RENDERBUFFER, *rbo);
+            //GLFunc.glRenderbufferStorageMultisample(GLEnum.GL_RENDERBUFFER, 16, GLEnum.GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
+            //GLFunc.glBindRenderbuffer(GLEnum.GL_RENDERBUFFER, 0);
+            //GLFunc.glFramebufferRenderbuffer(GLEnum.GL_FRAMEBUFFER, GLEnum.GL_DEPTH_ATTACHMENT, GLEnum.GL_RENDERBUFFER, *rbo);
 
 
             if (GLFunc.glCheckFramebufferStatus(GLEnum.GL_FRAMEBUFFER) != GLEnum.GL_FRAMEBUFFER_COMPLETE)
@@ -656,7 +763,21 @@ namespace glcore
         }
     }
 
-    public unsafe class GLCubemap
+    public struct TexSpec
+    { 
+       public int internalFormat;
+       public uint format;
+       public uint type;
+
+       public TexSpec(GL_Enum internalFormat, GL_Enum format, GL_Enum type)
+       {
+           this.internalFormat = (int)internalFormat;
+           this.format = (uint)format;
+           this.type = (uint)type;
+       }
+    }
+
+    public unsafe class GLCubemap : ITexture
     {
         internal bool disposed = false;
         public uint textureID;
@@ -754,5 +875,129 @@ namespace glcore
                 throw new Exception("Error Occured: " + t.ToString());
             textureID = tID;
         }
+
+        public uint GetID()
+        {
+            return textureID;
+        }
+
+        public uint GetMode()
+        {
+            const uint GL_TEXTURE_CUBEMAP = 0x8513;
+            return GL_TEXTURE_CUBEMAP;
+        }
+    }
+
+    public unsafe class GLBufferTexture : ITexture
+    { 
+        internal bool disposed = false;
+        internal uint textureID;
+        internal uint vID;
+
+        internal uint _iformat;
+
+        internal int _width;
+        public int Size { get { return _width ;} }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        ~GLBufferTexture()
+        {
+            Dispose(false);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposed)
+            {
+
+                disposed = true;
+            }
+        }
+
+        public void DeleteTexture()
+        {
+            uint tex = textureID, vbo = vID;
+            GLFunc.glDeleteTextures(1, &tex);
+            GLFunc.glDeleteBuffers(1, &vbo);
+        }
+
+        int oldSize;
+
+        public GLBufferTexture(int[] data, uint internalFormat)
+        {
+            int size = data.Length;
+            uint tbo, tex;
+            GLFunc.glGenBuffers(1, &tbo);
+            GLFunc.glBindBuffer(GLEnum.GL_TEXTURE_BUFFER, tbo);
+
+            GLFunc.glGenTextures(1, &tex);
+            GLFunc.glBindTexture(GLEnum.GL_TEXTURE_BUFFER, tex);
+
+            GLFunc.glTexBuffer(GLEnum.GL_TEXTURE_BUFFER, internalFormat, tbo);
+            GLFunc.glBindTexture(GLEnum.GL_TEXTURE_BUFFER, 0);
+
+            GLFunc.glBindBuffer(GLEnum.GL_TEXTURE_BUFFER, tbo);
+            GLFunc.glBufferData(GLEnum.GL_TEXTURE_BUFFER, size * 4, (void*)0, GLEnum.GL_DYNAMIC_DRAW);
+
+            textureID = tex;
+            vID = tbo;
+            _iformat = internalFormat;
+            oldSize = data.Length;
+
+            fixed (int* iptr = data)
+            {
+                GLFunc.glBufferSubData(GLEnum.GL_TEXTURE_BUFFER, (IntPtr)0, (IntPtr)(size * 4), iptr);
+            }
+
+            GLError t;
+            if (GL.CheckError(out t))
+                throw new Exception("Error Occured: " + t.ToString());
+        }
+
+        public void Update(int[] newData)
+        {
+            if (newData.Length != oldSize)
+                throw new Exception("To Resize a buffer please delete and make a new buffer!");
+
+            GLFunc.glBindTexture(GLEnum.GL_TEXTURE_BUFFER, textureID);
+            GLFunc.glBindBuffer(GLEnum.GL_TEXTURE_BUFFER, vID);
+
+            fixed (int* iptr = newData)
+            {
+                GLFunc.glBufferSubData(GLEnum.GL_TEXTURE_BUFFER, (IntPtr)0, (IntPtr)(newData.Length * 4), iptr);
+            }
+        }
+
+        public void SetPixel(int pos, object value)
+        {
+            GCHandle handle = GCHandle.Alloc(value, GCHandleType.Pinned);
+
+            GLFunc.glBindTexture(GLEnum.GL_TEXTURE_1D, textureID);
+            GLError ea = GL.CheckError();
+
+          //  GLFunc.glTexSubImage1D(GLEnum.GL_TEXTURE_1D, 0, pos, 1, pixelSpec.format, pixelSpec.type, (void*)handle.AddrOfPinnedObject());
+
+            GLError ea1 = GL.CheckError();
+
+            GLFunc.glBindTexture(GLEnum.GL_TEXTURE_1D, 0); //unbind
+
+            handle.Free();
+        }
+
+        public uint GetID()
+        {
+            return textureID;
+        }
+
+        public uint GetMode()
+        {
+            return GLEnum.GL_TEXTURE_BUFFER;
+        }
+
     }
 }

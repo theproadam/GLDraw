@@ -279,6 +279,12 @@ namespace glcore.Types
             return Math.Abs(CompareTo.x - x) < EPSILONLL && Math.Abs(CompareTo.y - y) < EPSILONLL && Math.Abs(CompareTo.z - z) < EPSILONLL;
         }
 
+        const float EPSILONLLL = 5E-1f;
+        public bool isApproximatelyLLL(Vector3 CompareTo)
+        {
+            return Math.Abs(CompareTo.x - x) < EPSILONLLL && Math.Abs(CompareTo.y - y) < EPSILONLLL && Math.Abs(CompareTo.z - z) < EPSILONLLL;
+        }
+
         const float EPSILONAE = 5E-7f;
         public bool isApproximatelyAE(Vector3 CompareTo)
         {
@@ -532,64 +538,6 @@ namespace glcore.Types
             }
         }
 
-        /// <summary>
-        /// Reduced Row-Echelon Form of the Matrix. Takes a Vector4 argument to make it a augmented matrix, returns the resulting 1,1,1,1 form.3
-        /// Naive-Gauss (implementation) WILL BREAK ON ZERO!
-        /// </summary>
-        /// <param name="RHS"></param>
-        /// <returns></returns>
-        public Vector4 RREF(Vector4 RHS)
-        {
-            Vector4 RHS_VAL = RHS;
-
-            AH_ROW(1, 0, 0, &RHS_VAL);
-            AH_ROW(2, 0, 0, &RHS_VAL);
-            AH_ROW(3, 0, 0, &RHS_VAL);
-
-            AH_ROW(3, 2, 1, &RHS_VAL);
-            AH_ROW(2, 1, 1, &RHS_VAL);
-
-            AH_ROW(3, 2, 2, &RHS_VAL);
-
-            // solve remain ->
-
-            AH_ROW(2, 3, 3, &RHS_VAL);
-            AH_ROW(1, 3, 3, &RHS_VAL);
-            AH_ROW(0, 3, 3, &RHS_VAL);
-
-
-            AH_ROW(0, 2, 2, &RHS_VAL);
-            AH_ROW(1, 2, 2, &RHS_VAL);
-
-
-            AH_ROW(0, 1, 1, &RHS_VAL);
-
-            //ensure it is in 1, 1, 1, 1 format
-
-            RHS_VAL.x = RHS_VAL.x / X0Y0;
-            RHS_VAL.y = RHS_VAL.y / X1Y1;
-            RHS_VAL.z = RHS_VAL.z / X2Y2;
-            RHS_VAL.w = RHS_VAL.w / X3Y3;
-
-            return RHS_VAL;
-        }
-
-        void AH_ROW(int r_target, int r_source, int column, Vector4* RHS)
-        {
-            fixed (Matrix4x4* mat4 = &this)
-            {
-                float* ptr = (float*)mat4;
-
-                float mult1 = ptr[column + r_target * 4] / ptr[column + r_source * 4];
-
-                ptr[r_target * 4] -= mult1 * ptr[r_source * 4];
-                ptr[r_target * 4 + 1] -= mult1 * ptr[r_source * 4 + 1];
-                ptr[r_target * 4 + 2] -= mult1 * ptr[r_source * 4 + 2];
-                ptr[r_target * 4 + 3] -= mult1 * ptr[r_source * 4 + 3];
-                ((float*)RHS)[r_target] -= mult1 * ((float*)RHS)[r_source];
-            }
-        }
-
         public Matrix4x4(bool makeIdentityMatrix)
         {
             fixed (Matrix4x4* mat4 = &this)
@@ -720,7 +668,7 @@ namespace glcore.Types
             return proj;
         }
 
-        static float FOVMod(float FOV, float aspectRatio)
+        public static float FOVMod(float FOV, float aspectRatio)
         {
             const float deg2rads = (float)(Math.PI / 180d);
             return 2.0f * (float)Math.Atan(Math.Tan(FOV * 0.5f * deg2rads) / aspectRatio) / deg2rads;
@@ -782,6 +730,7 @@ namespace glcore.Types
         public static Matrix4x4 OrthographicMatrix(float size, int viewportWidth, int viewportHeight, float zNear = 0.1f, float zFar = 1000f)
         {
             float aspectRatio = (float)viewportWidth / (float)viewportHeight;
+        //    Console.WriteLine("VP -> w: " + size + ", h: " + size / aspectRatio);
             return OrthographicMatrix(size, size / aspectRatio, zNear, zFar);
         }
 
@@ -811,6 +760,284 @@ namespace glcore.Types
                 X3Y3 = mC * A.X3Y3 + C * B.X3Y3
             };
         }
+
+        public static bool Inverse(Matrix4x4 input, out Matrix4x4 mat4)
+        { 
+            //ripped from GLU
+            float[] inv = new float[16];
+
+            Matrix4x4 mat = input.Transposed(); ;
+            float* m = (float*)&mat;
+
+            inv[0] = m[5] * m[10] * m[15] -
+                     m[5] * m[11] * m[14] -
+                     m[9] * m[6] * m[15] +
+                     m[9] * m[7] * m[14] +
+                     m[13] * m[6] * m[11] -
+                     m[13] * m[7] * m[10];
+
+            inv[4] = -m[4] * m[10] * m[15] +
+                      m[4] * m[11] * m[14] +
+                      m[8] * m[6] * m[15] -
+                      m[8] * m[7] * m[14] -
+                      m[12] * m[6] * m[11] +
+                      m[12] * m[7] * m[10];
+
+            inv[8] = m[4] * m[9] * m[15] -
+                     m[4] * m[11] * m[13] -
+                     m[8] * m[5] * m[15] +
+                     m[8] * m[7] * m[13] +
+                     m[12] * m[5] * m[11] -
+                     m[12] * m[7] * m[9];
+
+            inv[12] = -m[4] * m[9] * m[14] +
+                       m[4] * m[10] * m[13] +
+                       m[8] * m[5] * m[14] -
+                       m[8] * m[6] * m[13] -
+                       m[12] * m[5] * m[10] +
+                       m[12] * m[6] * m[9];
+
+            inv[1] = -m[1] * m[10] * m[15] +
+                      m[1] * m[11] * m[14] +
+                      m[9] * m[2] * m[15] -
+                      m[9] * m[3] * m[14] -
+                      m[13] * m[2] * m[11] +
+                      m[13] * m[3] * m[10];
+
+            inv[5] = m[0] * m[10] * m[15] -
+                     m[0] * m[11] * m[14] -
+                     m[8] * m[2] * m[15] +
+                     m[8] * m[3] * m[14] +
+                     m[12] * m[2] * m[11] -
+                     m[12] * m[3] * m[10];
+
+            inv[9] = -m[0] * m[9] * m[15] +
+                      m[0] * m[11] * m[13] +
+                      m[8] * m[1] * m[15] -
+                      m[8] * m[3] * m[13] -
+                      m[12] * m[1] * m[11] +
+                      m[12] * m[3] * m[9];
+
+            inv[13] = m[0] * m[9] * m[14] -
+                      m[0] * m[10] * m[13] -
+                      m[8] * m[1] * m[14] +
+                      m[8] * m[2] * m[13] +
+                      m[12] * m[1] * m[10] -
+                      m[12] * m[2] * m[9];
+
+            inv[2] = m[1] * m[6] * m[15] -
+                     m[1] * m[7] * m[14] -
+                     m[5] * m[2] * m[15] +
+                     m[5] * m[3] * m[14] +
+                     m[13] * m[2] * m[7] -
+                     m[13] * m[3] * m[6];
+
+            inv[6] = -m[0] * m[6] * m[15] +
+                      m[0] * m[7] * m[14] +
+                      m[4] * m[2] * m[15] -
+                      m[4] * m[3] * m[14] -
+                      m[12] * m[2] * m[7] +
+                      m[12] * m[3] * m[6];
+
+            inv[10] = m[0] * m[5] * m[15] -
+                      m[0] * m[7] * m[13] -
+                      m[4] * m[1] * m[15] +
+                      m[4] * m[3] * m[13] +
+                      m[12] * m[1] * m[7] -
+                      m[12] * m[3] * m[5];
+
+            inv[14] = -m[0] * m[5] * m[14] +
+                       m[0] * m[6] * m[13] +
+                       m[4] * m[1] * m[14] -
+                       m[4] * m[2] * m[13] -
+                       m[12] * m[1] * m[6] +
+                       m[12] * m[2] * m[5];
+
+            inv[3] = -m[1] * m[6] * m[11] +
+                      m[1] * m[7] * m[10] +
+                      m[5] * m[2] * m[11] -
+                      m[5] * m[3] * m[10] -
+                      m[9] * m[2] * m[7] +
+                      m[9] * m[3] * m[6];
+
+            inv[7] = m[0] * m[6] * m[11] -
+                     m[0] * m[7] * m[10] -
+                     m[4] * m[2] * m[11] +
+                     m[4] * m[3] * m[10] +
+                     m[8] * m[2] * m[7] -
+                     m[8] * m[3] * m[6];
+
+            inv[11] = -m[0] * m[5] * m[11] +
+                       m[0] * m[7] * m[9] +
+                       m[4] * m[1] * m[11] -
+                       m[4] * m[3] * m[9] -
+                       m[8] * m[1] * m[7] +
+                       m[8] * m[3] * m[5];
+
+            inv[15] = m[0] * m[5] * m[10] -
+                      m[0] * m[6] * m[9] -
+                      m[4] * m[1] * m[10] +
+                      m[4] * m[2] * m[9] +
+                      m[8] * m[1] * m[6] -
+                      m[8] * m[2] * m[5];
+
+            float det  = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
+
+            if (det == 0)
+            {
+               // throw new Exception();
+                mat4 = new Matrix4x4();
+                return false;
+            }
+
+            det = 1.0f / det;
+
+            for (int i = 0; i < 16; i++)
+                m[i] = inv[i] * det;
+
+            mat4 = mat.Transposed();
+            return true;
+        }
+
+        public static bool Inverse2(Matrix4x4 input, out Matrix4x4 mat4)
+        {
+            //ripped from GLU
+            float[] inv = new float[16];
+
+            Matrix4x4 mat = input;
+            float* m = (float*)&mat;
+
+            inv[0] = m[5] * m[10] * m[15] -
+                     m[5] * m[11] * m[14] -
+                     m[9] * m[6] * m[15] +
+                     m[9] * m[7] * m[14] +
+                     m[13] * m[6] * m[11] -
+                     m[13] * m[7] * m[10];
+
+            inv[4] = -m[4] * m[10] * m[15] +
+                      m[4] * m[11] * m[14] +
+                      m[8] * m[6] * m[15] -
+                      m[8] * m[7] * m[14] -
+                      m[12] * m[6] * m[11] +
+                      m[12] * m[7] * m[10];
+
+            inv[8] = m[4] * m[9] * m[15] -
+                     m[4] * m[11] * m[13] -
+                     m[8] * m[5] * m[15] +
+                     m[8] * m[7] * m[13] +
+                     m[12] * m[5] * m[11] -
+                     m[12] * m[7] * m[9];
+
+            inv[12] = -m[4] * m[9] * m[14] +
+                       m[4] * m[10] * m[13] +
+                       m[8] * m[5] * m[14] -
+                       m[8] * m[6] * m[13] -
+                       m[12] * m[5] * m[10] +
+                       m[12] * m[6] * m[9];
+
+            inv[1] = -m[1] * m[10] * m[15] +
+                      m[1] * m[11] * m[14] +
+                      m[9] * m[2] * m[15] -
+                      m[9] * m[3] * m[14] -
+                      m[13] * m[2] * m[11] +
+                      m[13] * m[3] * m[10];
+
+            inv[5] = m[0] * m[10] * m[15] -
+                     m[0] * m[11] * m[14] -
+                     m[8] * m[2] * m[15] +
+                     m[8] * m[3] * m[14] +
+                     m[12] * m[2] * m[11] -
+                     m[12] * m[3] * m[10];
+
+            inv[9] = -m[0] * m[9] * m[15] +
+                      m[0] * m[11] * m[13] +
+                      m[8] * m[1] * m[15] -
+                      m[8] * m[3] * m[13] -
+                      m[12] * m[1] * m[11] +
+                      m[12] * m[3] * m[9];
+
+            inv[13] = m[0] * m[9] * m[14] -
+                      m[0] * m[10] * m[13] -
+                      m[8] * m[1] * m[14] +
+                      m[8] * m[2] * m[13] +
+                      m[12] * m[1] * m[10] -
+                      m[12] * m[2] * m[9];
+
+            inv[2] = m[1] * m[6] * m[15] -
+                     m[1] * m[7] * m[14] -
+                     m[5] * m[2] * m[15] +
+                     m[5] * m[3] * m[14] +
+                     m[13] * m[2] * m[7] -
+                     m[13] * m[3] * m[6];
+
+            inv[6] = -m[0] * m[6] * m[15] +
+                      m[0] * m[7] * m[14] +
+                      m[4] * m[2] * m[15] -
+                      m[4] * m[3] * m[14] -
+                      m[12] * m[2] * m[7] +
+                      m[12] * m[3] * m[6];
+
+            inv[10] = m[0] * m[5] * m[15] -
+                      m[0] * m[7] * m[13] -
+                      m[4] * m[1] * m[15] +
+                      m[4] * m[3] * m[13] +
+                      m[12] * m[1] * m[7] -
+                      m[12] * m[3] * m[5];
+
+            inv[14] = -m[0] * m[5] * m[14] +
+                       m[0] * m[6] * m[13] +
+                       m[4] * m[1] * m[14] -
+                       m[4] * m[2] * m[13] -
+                       m[12] * m[1] * m[6] +
+                       m[12] * m[2] * m[5];
+
+            inv[3] = -m[1] * m[6] * m[11] +
+                      m[1] * m[7] * m[10] +
+                      m[5] * m[2] * m[11] -
+                      m[5] * m[3] * m[10] -
+                      m[9] * m[2] * m[7] +
+                      m[9] * m[3] * m[6];
+
+            inv[7] = m[0] * m[6] * m[11] -
+                     m[0] * m[7] * m[10] -
+                     m[4] * m[2] * m[11] +
+                     m[4] * m[3] * m[10] +
+                     m[8] * m[2] * m[7] -
+                     m[8] * m[3] * m[6];
+
+            inv[11] = -m[0] * m[5] * m[11] +
+                       m[0] * m[7] * m[9] +
+                       m[4] * m[1] * m[11] -
+                       m[4] * m[3] * m[9] -
+                       m[8] * m[1] * m[7] +
+                       m[8] * m[3] * m[5];
+
+            inv[15] = m[0] * m[5] * m[10] -
+                      m[0] * m[6] * m[9] -
+                      m[4] * m[1] * m[10] +
+                      m[4] * m[2] * m[9] +
+                      m[8] * m[1] * m[6] -
+                      m[8] * m[2] * m[5];
+
+            float det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
+
+            if (det <= 1E-5f)
+            {
+                throw new Exception();
+                mat4 = new Matrix4x4();
+                return false;
+            }
+
+            det = 1.0f / det;
+
+            for (int i = 0; i < 16; i++)
+                m[i] = inv[i] * det;
+
+            mat4 = mat;
+            return true;
+        }
+
+
 
         public static Matrix4x4 TranslationMatrix(Vector3 Position)
         {
@@ -955,7 +1182,7 @@ namespace glcore.Types
 
             ret.X0Y2 = X0Y2;
             ret.X1Y2 = X1Y2;
-            ret.X2Y0 = X2Y2;
+            ret.X2Y2 = X2Y2;
 
             return ret;
         }
@@ -1121,6 +1348,21 @@ namespace glcore.Types
             }
         }
 
+        public static Matrix3x3 FromArray(params float[] input)
+        {
+            if (input.Length != 9)
+                throw new Exception("Invalid Size");
+
+            Matrix3x3 mat3 = new Matrix3x3();
+
+            for (int i = 0; i < 9; i++)
+            {
+                mat3[i] = input[i];
+            }
+
+            return mat3;
+        }
+
         public static Matrix3x3 Identity { get { return IdentityMatrix(); } }
 
         public static Matrix3x3 IdentityMatrix()
@@ -1128,6 +1370,50 @@ namespace glcore.Types
             Matrix3x3 mat = new Matrix3x3();
             mat.SetIdentityMatrix();
             return mat;
+        }
+
+        /// <summary>
+        /// COLUMN MAJOR ORDER
+        /// </summary>
+        /// <param name="index"></param>
+        /// <returns></returns>
+        public float this[int index]
+        {
+            get {
+                if (index == 0) return X0Y0;
+                else if (index == 1) return X0Y1;
+                else if (index == 2) return X0Y2;
+                else if (index == 3) return X1Y0;
+                else if (index == 4) return X1Y1;
+                else if (index == 5) return X1Y2;
+                else if (index == 6) return X2Y0;
+                else if (index == 7) return X2Y1;
+                else if (index == 8) return X2Y2;
+                else throw new Exception("Out of Range!");
+            }
+            set { if (index == 0) X0Y0 = value;
+                else if (index == 1) X0Y1 = value;
+                else if (index == 2) X0Y2 = value;
+                else if (index == 3) X1Y0 = value;
+                else if (index == 4) X1Y1 = value;
+                else if (index == 5) X1Y2 = value;
+                else if (index == 6) X2Y0 = value;
+                else if (index == 7) X2Y1 = value;
+                else if (index == 8) X2Y2 = value;
+                else throw new Exception("Out of Range!"); }
+        }
+
+
+        public float this[int row, int column]
+        {
+            get
+            {
+                return this[row + column * 3];
+            }
+            set
+            {
+                this[row + column * 3] = value;
+            }
         }
 
         /// <summary>
@@ -1390,6 +1676,18 @@ namespace glcore.Types
             result.z = A.X0Y2 * B.x + A.X1Y2 * B.y + A.X2Y2 * B.z;
             return result;
         }
+
+        public override string ToString()
+        {
+            string str = "";
+
+            for (int i = 0; i < 9; i++)
+            {
+                str += this[i] + " ";
+            }
+
+            return str;
+        }
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -1411,6 +1709,42 @@ namespace glcore.Types
             y = vec3.y;
             z = vec3.z;
             w = W;
+        }
+
+        public Vector3 xyz()
+        {
+            return new Vector3(x, y, z);
+        }
+
+        public static Vector4 operator -(Vector4 A)
+        {
+            return new Vector4(-A.x, -A.y, -A.z, -A.w);
+        }
+
+        /// <summary>
+        /// Adds two Vector3 together
+        /// </summary>
+        /// <param name="A"></param>
+        /// <param name="B"></param>
+        /// <returns></returns>
+        public static Vector4 operator +(Vector4 A, Vector4 B)
+        {
+            return new Vector4(A.x + B.x, A.y + B.y, A.z + B.z, A.w + B.w);
+        }
+        /// <summary>
+        /// Substacts Vector B from Vector A
+        /// </summary>
+        /// <param name="A">Vector A</param>
+        /// <param name="B">Vector B</param>
+        /// <returns></returns>
+        public static Vector4 operator -(Vector4 A, Vector4 B)
+        {
+            return new Vector4(A.x - B.x, A.y - B.y, A.z - B.z, A.w - B.w);
+        }
+
+        public static Vector4 operator *(Vector4 A, float B)
+        {
+            return new Vector4(A.x * B, A.y * B, A.z * B, A.w * B);
         }
 
         /// <summary>

@@ -35,7 +35,7 @@ namespace GLDemo
         GLBuffer quad;
 
         Shader copyShader;
-        GLFramebuffer fbTest;
+       
 
         float rotPos = 0;
 
@@ -193,10 +193,10 @@ namespace GLDemo
             }, teapotShader);
 
 
-            fbTest = new GLFramebuffer(800, 800);
+           // fbTest = new GLFramebuffer(800, 800);
 
            
-            copyShader.LinkTexture("screenTexture", fbTest);
+         //   copyShader.LinkTexture("screenTexture", fbTest);
 
             RT = new RenderThread(144);
             RT.RenderFrame += RT_RenderFrame;

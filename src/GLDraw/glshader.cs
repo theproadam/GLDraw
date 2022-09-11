@@ -13,9 +13,11 @@ namespace glcore
 {
     public unsafe class Shader : IDisposable
     {
-        internal List<GLTexture> linkedTextures = new List<GLTexture>();
-        internal List<GLFramebuffer> linkedFramebuffers = new List<GLFramebuffer>();
-        internal List<GLCubemap> linkedCubemaps = new List<GLCubemap>();
+        //internal List<GLTexture> linkedTextures = new List<GLTexture>();
+        //internal List<GLTexture1D> linkedTextures1D = new List<GLTexture1D>();
+        //internal List<GLCubemap> linkedCubemaps = new List<GLCubemap>();
+
+        internal List<LinkedTextures> linkedTextures = new List<LinkedTextures>();
 
         internal List<GLRenderBuffer> linkedRBO = new List<GLRenderBuffer>();
 
@@ -25,6 +27,7 @@ namespace glcore
         internal uint shaderProgram;
         internal bool disposed = false;
 
+        public uint ShaderID { get { return shaderProgram; } }
 
         public void Dispose()
         {
@@ -139,56 +142,31 @@ namespace glcore
             GCHandle handle = GCHandle.Alloc(value, GCHandleType.Pinned);
             void* ptr = (void*)handle.AddrOfPinnedObject();
 
-            byte[] targetName = Encoding.ASCII.GetBytes(name + "\0");
+            byte[] targetName = Encoding.ASCII.GetBytes(name + "\0"); //replace with name.toCharArray() as it includes \0
 
             fixed (byte* namePtr = targetName)
             {
                 if (SetValue(namePtr, shaderProgram, value, ptr) == -1)
-                    throw new Exception("The attribute \"" + name + "\" was not found in the shader!");
+                     //throw new Exception("The attribute \"" + name + "\" was not found in the shader!");
+                    ; //do nothing fuck this shit
             }
 
             handle.Free();
         }
 
-        public void LinkTexture(string name, GLTexture targetTexture)
+        public void LinkTexture(string name, ITexture target)
         {
             byte[] targetName = Encoding.ASCII.GetBytes(name + "\0");
-            int count = linkedFramebuffers.Count + linkedCubemaps.Count + linkedTextures.Count;
-            
-            fixed (byte* namePtr = targetName)
-            {
-                if (LinkTexture(namePtr, shaderProgram, targetTexture.textureID, (uint)count) == -1)
-                    throw new Exception("The attribute \"" + name + "\" was not found in the shader!");
-
-                linkedTextures.Add(targetTexture);
-            }
-        }
-
-        public void LinkCubemap(string name, GLCubemap targetCubemap)
-        {
-            byte[] targetName = Encoding.ASCII.GetBytes(name + "\0");
-            int count = linkedFramebuffers.Count + linkedCubemaps.Count + linkedTextures.Count;
+            int index = linkedTextures.FindIndex(z => z.name == name);
 
             fixed (byte* namePtr = targetName)
             {
-                if (LinkTexture(namePtr, shaderProgram, targetCubemap.textureID, (uint)count) == -1)
+                if (LinkTexture(namePtr, shaderProgram, target.GetID(), index == -1 ? (uint)linkedTextures.Count : (uint)index) == -1)
+                    throw new Exception("\"" + name + "\" does not exist in the shader!");
 
-                linkedCubemaps.Add(targetCubemap);
-            }
-        }
-
-        public void LinkTexture(string name, GLFramebuffer framebufferTexture)
-        {
-            byte[] targetName = Encoding.ASCII.GetBytes(name + "\0");
-            int count = linkedFramebuffers.Count + linkedCubemaps.Count + linkedTextures.Count;
-
-            fixed (byte* namePtr = targetName)
-            {
-                if (LinkTexture(namePtr, shaderProgram, framebufferTexture.tex, (uint)count) == -1)
-                    throw new Exception("The attribute \"" + name + "\" was not found in the shader!");
-
-                //    linkedTextures.Add(targetTexture);
-                linkedFramebuffers.Add(framebufferTexture);
+                if (index == -1)
+                    linkedTextures.Add(new LinkedTextures(name, target));
+                else linkedTextures[index] = new LinkedTextures(name, target);
             }
         }
 
@@ -275,7 +253,7 @@ namespace glcore
 
         static int LinkTexture(byte* name, uint shaderProgram, uint textureID, uint textureUnit)
 	    {
-            //WARNING THIS TEXTURE UNIT SETUP IS NOT CORRECT!!!!
+            //WARNING THIS TEXTURE UNIT SETUP IS NOT CORRECT!!!! [is it tho?]
 		    GLFunc.glUseProgram(shaderProgram);
             int location = GLFunc.glGetUniformLocation(shaderProgram, name);
 
@@ -320,6 +298,11 @@ namespace glcore
             {
                 GLFunc.glUniform1ui(location, *(uint*)data);
             }
+            else if (t == typeof(float))
+            {
+                GLFunc.glUniform1f(location, *(float*)data);
+            }
+
             else throw new Exception("not implemented!");
 
 		    return location;
@@ -334,6 +317,24 @@ namespace glcore
             else if (t == GLType.GL_FLOAT_VEC4) return 4;
             else throw new Exception("Not Yet Implmented!");
         }
+    }
+
+    internal struct LinkedTextures
+    {
+        public string name;
+        public ITexture texture;
+
+        public LinkedTextures(string nm, ITexture tex)
+        {
+            name = nm;
+            texture = tex;
+        }
+    }
+
+    public interface ITexture
+    {
+        uint GetID();
+        uint GetMode();
     }
 
     struct ShaderConfig
