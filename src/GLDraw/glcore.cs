@@ -50,7 +50,6 @@ namespace glcore
                 GLFunc.glActiveTexture(GLEnum.GL_TEXTURE0 + (uint)i); //glActiveTexture(GL_TEXTURE0);
                 GLFunc.glBindTexture(shader.linkedTextures[i].texture.GetMode(), shader.linkedTextures[i].texture.GetID());
                 
-
                 o++;
             }
 
@@ -257,7 +256,7 @@ namespace glcore
 
     public unsafe partial class BlitData : IDisposable
     {
-        public BlitData(object target, params int[] wglConfig)
+        public BlitData(object target, bool enableAA)
         {
             IntPtr handle;
             if (target.GetType() == typeof(IntPtr))
@@ -286,26 +285,25 @@ namespace glcore
                 (int)WGL_ARB.WGL_BLUE_BITS_ARB, 8,
                 (int)WGL_ARB.WGL_ALPHA_BITS_ARB, 8,
                 (int)WGL_ARB.WGL_DEPTH_BITS_ARB, 24,
-                (int)WGL_ARB.WGL_STENCIL_BITS_ARB, 0,
+                (int)WGL_ARB.WGL_STENCIL_BITS_ARB, 8,
                 (int)WGL_ARB.WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
                 (int)WGL_ARB.WGL_PIXEL_TYPE_ARB, (int)WGL_ARB.WGL_TYPE_RGBA_ARB,
                 (int)WGL_ARB.WGL_SAMPLE_BUFFERS_ARB, GL_TRUE,
                 (int)WGL_ARB.WGL_SAMPLES_ARB, 16,
                 0, 0 };
 
-            //int[] piAttribIList = new int[]
-            //{
-            //    (int)WGL_ARB.WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
-            //    (int)WGL_ARB.WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
-            //    (int)WGL_ARB.WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
-            //    (int)WGL_ARB.WGL_PIXEL_TYPE_ARB, (int)WGL_ARB.WGL_TYPE_RGBA_ARB,
-            //    (int)WGL_ARB.WGL_COLOR_BITS_ARB, 32,
-            //    (int)WGL_ARB.WGL_DEPTH_BITS_ARB, 24,
-            //    (int)WGL_ARB.WGL_STENCIL_BITS_ARB, 8,
-            //    0, // End
-            //};
-
-            float[] fList = new float[2];
+            if (!enableAA)
+                piAttribIList = new int[]
+                {
+                    (int)WGL_ARB.WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
+                    (int)WGL_ARB.WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
+                    (int)WGL_ARB.WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
+                    (int)WGL_ARB.WGL_PIXEL_TYPE_ARB, (int)WGL_ARB.WGL_TYPE_RGBA_ARB,
+                    (int)WGL_ARB.WGL_COLOR_BITS_ARB, 32,
+                    (int)WGL_ARB.WGL_DEPTH_BITS_ARB, 32,
+                    (int)WGL_ARB.WGL_STENCIL_BITS_ARB, 0,
+                    0, // End
+                };
 
             int pixelFormat;
             uint nNumFormats;
@@ -314,11 +312,8 @@ namespace glcore
 
             fixed (int* iptr = piAttribIList)
             {
-                fixed (float* fptr = fList)
-                {
-                    //result = wglSetPixelFormat((void*)TargetDC, iptr, fptr, 1, &pixelFormat, &nNumFormats);
-                    result = GLFunc.wglChoosePixelFormatARB((void*)TargetDC, iptr, (float*)0, 1, &pixelFormat, &nNumFormats);
-                }
+                //result = wglSetPixelFormat((void*)TargetDC, iptr, fptr, 1, &pixelFormat, &nNumFormats);
+                result = GLFunc.wglChoosePixelFormatARB((void*)TargetDC, iptr, (float*)0, 1, &pixelFormat, &nNumFormats);
             }
 
             if (!result)
@@ -357,6 +352,96 @@ namespace glcore
            // GL.glEnable(0x809D);
 
         }
+
+
+
+        public BlitData(object target, params int[] wglConfig)
+        {
+            IntPtr handle;
+            if (target.GetType() == typeof(IntPtr))
+                handle = (IntPtr)target;
+            else if (target.GetType().BaseType == typeof(Control))
+                handle = ((Control)target).Handle;
+            else if (target.GetType().BaseType == typeof(Form))
+                handle = ((Form)target).Handle;
+            else throw new Exception("Target must be a Control/Form or a Handle!");
+
+
+
+            LinkedHandle = handle;
+            TargetDC = GLFunc.GetDC(handle);
+
+
+            int GL_TRUE = 1;
+            int GL_FALSE = 0;
+
+            int[] piAttribIList = wglConfig;
+
+            //int[] piAttribIList = new int[]
+            //{
+            //    (int)WGL_ARB.WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
+            //    (int)WGL_ARB.WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
+            //    (int)WGL_ARB.WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
+            //    (int)WGL_ARB.WGL_PIXEL_TYPE_ARB, (int)WGL_ARB.WGL_TYPE_RGBA_ARB,
+            //    (int)WGL_ARB.WGL_COLOR_BITS_ARB, 32,
+            //    (int)WGL_ARB.WGL_DEPTH_BITS_ARB, 32,
+            //    (int)WGL_ARB.WGL_STENCIL_BITS_ARB, 0,
+            //    0, // End
+            //};
+
+            float[] fList = new float[2];
+
+            int pixelFormat;
+            uint nNumFormats;
+
+            bool result;
+
+            fixed (int* iptr = piAttribIList)
+            {
+                fixed (float* fptr = fList)
+                {
+                    //result = wglSetPixelFormat((void*)TargetDC, iptr, fptr, 1, &pixelFormat, &nNumFormats);
+                    result = GLFunc.wglChoosePixelFormatARB((void*)TargetDC, iptr, (float*)0, 1, &pixelFormat, &nNumFormats);
+                }
+            }
+
+            if (!result)
+                throw new Exception("wglSetPixelFormat");
+
+            PixelFormatDescriptor pfd = new PixelFormatDescriptor()
+            {
+                Size = (ushort)sizeof(PixelFormatDescriptor),
+                Version = 1,
+                Flags = 0x00000004 | 0x00000020 | 0x00000001, //PFD WINDOW, OPENGL, DBUFFER
+                PixelType = 0, //RGBA
+                DepthBits = 24, //32bit depth
+                LayerType = 0, //PFD_MAIN_PLANE
+                ColorBits = 32
+
+            };
+
+
+            // make that match the device context's current pixel format 
+            if (GLFunc.SetPixelFormat(TargetDC, pixelFormat, ref pfd) == 0)
+            {
+                throw new Exception("SetPixelFormat Failed");
+            }
+
+            if ((m_hglrc = GLFunc.wglCreateContext(TargetDC)) == IntPtr.Zero)
+            {
+                throw new Exception("wglCreateContext Failed");
+            }
+
+            if ((GLFunc.wglMakeCurrent(TargetDC, m_hglrc)) == IntPtr.Zero)
+            {
+                throw new Exception("wglMakeCurrent Failed");
+            }
+
+            // GL.glEnable(0x0B71);
+            // GL.glEnable(0x809D);
+
+        }
+
 
         public void Bind()
         {

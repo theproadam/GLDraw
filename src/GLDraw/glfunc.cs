@@ -96,6 +96,12 @@ namespace glcore.gl
         [DllImport("opengl32.dll")]
         public static extern void glGetTexLevelParameteriv(uint target, int level, uint pname, int* _params);
 
+        [DllImport("opengl32.dll")]
+        public static extern void glBindTexture(uint target, uint texture);
+
+        [DllImport("opengl32.dll")]
+        public static extern void glDrawArrays(uint mode, int first, int count);
+
         //WARNING THERE MIGHT BE A TYPE MISMATCH WITH UNSIGNED CHAR (byte) AND SIGNED CHAR (sbyte)
 
         public delegate uint GLCreateShader(uint shader);
@@ -185,14 +191,8 @@ namespace glcore.gl
         public delegate void GLDeleteVertexArrays(int n, uint* arrays);
         public static GLDeleteVertexArrays glDeleteVertexArrays;
 
-        public delegate void GLBindTexture(uint target, uint texture);
-        public static GLBindTexture glBindTexture;
-
         public delegate void GLActiveTexture(uint texture);
         public static GLActiveTexture glActiveTexture;
-
-        public delegate void GLDrawArrays(uint mode, int first, int count);
-        public static GLDrawArrays glDrawArrays;
 
         public delegate void GLGenFramebuffers(int n, uint* ids);
         public static GLGenFramebuffers glGenFramebuffers;
@@ -488,27 +488,12 @@ namespace glcore.gl
 
             glDeleteVertexArrays = (GLDeleteVertexArrays)Marshal.GetDelegateForFunctionPointer(glDeleteVertexArraysPtr, typeof(GLDeleteVertexArrays));
 
-
-            //Load glBindTexture
-            IntPtr glBindTexturePtr;
-            if ((glBindTexturePtr = wglGetProcAddress("glBindTexture")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glBindTexture!");
-
-            glBindTexture = (GLBindTexture)Marshal.GetDelegateForFunctionPointer(glBindTexturePtr, typeof(GLBindTexture));
-
             //Load glActiveTexture
             IntPtr glActiveTexturePtr;
             if ((glActiveTexturePtr = wglGetProcAddress("glActiveTexture")) == IntPtr.Zero)
                 throw new Exception("Failed To Load glActiveTexture!");
 
             glActiveTexture = (GLActiveTexture)Marshal.GetDelegateForFunctionPointer(glActiveTexturePtr, typeof(GLActiveTexture));
-
-            //Load glDrawArrays
-            IntPtr glDrawArraysPtr;
-            if ((glDrawArraysPtr = wglGetProcAddress("glDrawArrays")) == IntPtr.Zero)
-                throw new Exception("Failed To Load glDrawArrays!");
-
-            glDrawArrays = (GLDrawArrays)Marshal.GetDelegateForFunctionPointer(glDrawArraysPtr, typeof(GLDrawArrays));
 
             //Load glGenFramebuffers
             IntPtr glGenFramebuffersPtr;
